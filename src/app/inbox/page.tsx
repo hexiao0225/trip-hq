@@ -64,7 +64,9 @@ function EmailRow({ email }: { email: InboundEmail }) {
 
 function PendingItem({ segment }: { segment: Segment }) {
   return (
-    <div className="rounded-xl border border-amber-300 bg-amber-50/50 p-2">
+    // Neutral dashed frame rather than an amber fill, so it reads as "not
+    // accepted yet" without fighting the card's own kind tint inside it.
+    <div className="rounded-xl border border-dashed border-stone-300 p-2">
       <SegmentCard segment={segment} />
 
       <div className="mt-2 flex flex-wrap items-center gap-2 px-2 pb-1">

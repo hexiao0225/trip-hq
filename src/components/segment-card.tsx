@@ -137,7 +137,7 @@ export function SegmentCard({ segment }: { segment: Segment }) {
      * map button lifted above on its own layer.
      */
     <div
-      className={`relative rounded-xl border border-edge bg-surface p-4 transition hover:border-stone-300 hover:shadow-sm ${
+      className={`relative rounded-xl border p-4 transition hover:shadow-sm ${meta.tintClass} ${
         cancelled ? "opacity-55" : ""
       }`}
     >
