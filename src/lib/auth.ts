@@ -105,12 +105,25 @@ export function safeEqual(a: string, b: string): boolean {
   return mismatch === 0;
 }
 
+/**
+ * Secrets routinely pick up a trailing newline on the way into a hosting
+ * provider (piping a file into `vercel env add` does exactly that), and a
+ * passcode or token was never meant to have surrounding whitespace. Trim both
+ * sides of the comparison so that can't silently lock anyone out.
+ */
+function expectedSecret(name: string): string | null {
+  const value = process.env[name];
+  if (!value) return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 export function checkPasscode(input: string): boolean {
-  const expected = process.env.APP_PASSCODE;
+  const expected = expectedSecret("APP_PASSCODE");
   if (!expected) {
     throw new Error("APP_PASSCODE is not set.");
   }
-  return safeEqual(input, expected);
+  return safeEqual(input.trim(), expected);
 }
 
 /**
@@ -119,7 +132,7 @@ export function checkPasscode(input: string): boolean {
  * works with providers that only let you customise the URL.
  */
 export function checkWebhookSecret(request: Request): boolean {
-  const expected = process.env.INBOUND_WEBHOOK_SECRET;
+  const expected = expectedSecret("INBOUND_WEBHOOK_SECRET");
   if (!expected) return false;
 
   const url = new URL(request.url);
@@ -128,5 +141,5 @@ export function checkWebhookSecret(request: Request): boolean {
 
   const provided = fromQuery ?? fromHeader;
   if (!provided) return false;
-  return safeEqual(provided, expected);
+  return safeEqual(provided.trim(), expected);
 }
