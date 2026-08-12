@@ -2,7 +2,7 @@ import "server-only";
 
 import { asc, desc, eq, ne } from "drizzle-orm";
 
-import { LEGS, type LegId } from "@/lib/config";
+import { LEGS, PETS_FILTER_ID, isPet, type LegId } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { inboundEmails, segments, type Segment } from "@/lib/db/schema";
 import { dayKey } from "@/lib/time";
@@ -100,12 +100,19 @@ export function resolveLeg(row: Segment): LegId {
   return "unscheduled";
 }
 
-/** Restrict a list to segments involving a given traveler. */
+/** Restrict a list to segments involving a given traveler, or either dog. */
 export function filterByTraveler(
   rows: Segment[],
   travelerId: string | null,
 ): Segment[] {
   if (!travelerId) return rows;
+
+  // The dogs share one tab. An unassigned segment counts as everyone's, but
+  // it is not a dog's — so this branch requires an actual pet.
+  if (travelerId === PETS_FILTER_ID) {
+    return rows.filter((row) => row.travelers.some((id) => isPet(id)));
+  }
+
   return rows.filter(
     (row) => row.travelers.length === 0 || row.travelers.includes(travelerId),
   );

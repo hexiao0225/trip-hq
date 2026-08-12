@@ -68,6 +68,13 @@ export function isPet(id: string): boolean {
   return PET_IDS.includes(id);
 }
 
+/**
+ * The dogs share one filter tab. They stay individually assignable — a vet
+ * visit is often for one of them — but nobody wants to check two tabs to see
+ * what's happening at home.
+ */
+export const PETS_FILTER_ID = "pets";
+
 export type LegId =
   | "london"
   | "scotland"

@@ -40,7 +40,7 @@ function EmailRow({ email }: { email: InboundEmail }) {
 
       <form action={reparseEmail}>
         <input type="hidden" name="id" value={email.id} />
-        <button type="submit" className="btn-secondary px-2 py-1 text-xs">
+        <button type="submit" className="btn-secondary min-h-10 px-3 text-xs">
           Re-parse
         </button>
       </form>
@@ -70,21 +70,21 @@ function PendingItem({ segment }: { segment: Segment }) {
       <div className="mt-2 flex flex-wrap items-center gap-2 px-2 pb-1">
         <form action={confirmSegment}>
           <input type="hidden" name="id" value={segment.id} />
-          <button type="submit" className="btn-primary px-3 py-1.5 text-xs">
+          <button type="submit" className="btn-primary min-h-10 px-3 text-xs">
             Add to timeline
           </button>
         </form>
 
         <Link
           href={`/segment/${segment.id}`}
-          className="btn-secondary px-3 py-1.5 text-xs"
+          className="btn-secondary min-h-10 px-3 text-xs"
         >
           Edit first
         </Link>
 
         <form action={discardSegment}>
           <input type="hidden" name="id" value={segment.id} />
-          <button type="submit" className="btn-danger px-3 py-1.5 text-xs">
+          <button type="submit" className="btn-danger min-h-10 px-3 text-xs">
             Discard
           </button>
         </form>

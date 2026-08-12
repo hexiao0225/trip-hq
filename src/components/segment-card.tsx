@@ -51,6 +51,30 @@ function endpointLabel(
 }
 
 /**
+ * What to hand Google Maps. Prefers a street address, then the destination of
+ * a journey, then the place itself — enough to be useful from a taxi.
+ */
+function mapsQuery(segment: Segment): string | null {
+  if (segment.address?.trim()) return segment.address.trim();
+
+  const destination = [segment.toLabel, segment.toCity]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+  if (destination) return destination;
+
+  const origin = [segment.fromLabel, segment.fromCity]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+  return origin || null;
+}
+
+function mapsUrl(query: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+/**
  * Describes when the segment happens, in words that suit its kind: a duration
  * for flights, a night count for stays, a plain time for everything else.
  */
@@ -103,14 +127,26 @@ function Timing({ segment }: { segment: Segment }) {
 export function SegmentCard({ segment }: { segment: Segment }) {
   const meta = kindMeta(segment.kind);
   const cancelled = segment.status === "cancelled";
+  const query = mapsQuery(segment);
 
   return (
-    <Link
-      href={`/segment/${segment.id}`}
-      className={`block rounded-xl border border-edge bg-surface p-4 transition hover:border-stone-300 hover:shadow-sm ${
+    /*
+     * The whole card opens the detail view, but the map link has to stay a
+     * separate destination — and an anchor can't be nested inside another. So
+     * the card is a plain container with a stretched link behind it, and the
+     * map button lifted above on its own layer.
+     */
+    <div
+      className={`relative rounded-xl border border-edge bg-surface p-4 transition hover:border-stone-300 hover:shadow-sm ${
         cancelled ? "opacity-55" : ""
       }`}
     >
+      <Link
+        href={`/segment/${segment.id}`}
+        aria-label={`Open ${segment.title}`}
+        className="absolute inset-0 rounded-xl"
+      />
+
       <div className="flex items-start gap-3">
         <span aria-hidden className="mt-0.5 text-lg leading-none">
           {meta.icon}
@@ -161,8 +197,21 @@ export function SegmentCard({ segment }: { segment: Segment }) {
               )}
             </p>
           )}
+
+          {query && (
+            <a
+              href={mapsUrl(query)}
+              target="_blank"
+              rel="noreferrer"
+              // Sits above the stretched link so it stays its own tap target,
+              // and is padded to a comfortable thumb size on a phone.
+              className="relative z-10 -ml-1 mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted transition hover:bg-stone-100 hover:text-foreground"
+            >
+              <span aria-hidden>📍</span> Open in Maps
+            </a>
+          )}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

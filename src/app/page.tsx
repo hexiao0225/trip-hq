@@ -3,7 +3,12 @@ import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { SegmentCard } from "@/components/segment-card";
 import { SetupNotice } from "@/components/setup-notice";
-import { LEGS, MILESTONES, PETS, TRAVELERS, legById } from "@/lib/config";
+import {
+  MILESTONES,
+  PETS_FILTER_ID,
+  TRAVELERS,
+  legById,
+} from "@/lib/config";
 import type { Segment } from "@/lib/db/schema";
 import {
   filterByTraveler,
@@ -54,9 +59,8 @@ function TravelerFilter({ active }: { active: string | null }) {
   const options = [
     { id: null, label: "Everyone" },
     ...TRAVELERS.map((t) => ({ id: t.id as string | null, label: t.name })),
-    // The dogs stay home, but their boarding runs alongside the trip and is
-    // worth being able to isolate.
-    ...PETS.map((p) => ({ id: p.id as string | null, label: `🐕 ${p.name}` })),
+    // Both dogs behind one tab — what's happening at home is a single question.
+    { id: PETS_FILTER_ID as string | null, label: "🐕 Pets" },
   ];
 
   return (
@@ -67,7 +71,7 @@ function TravelerFilter({ active }: { active: string | null }) {
           <Link
             key={option.label}
             href={option.id ? `/?who=${option.id}` : "/"}
-            className={`rounded-full border px-3 py-1.5 text-sm transition ${
+            className={`inline-flex min-h-10 items-center rounded-full border px-3.5 text-sm transition ${
               selected
                 ? "border-stone-900 bg-stone-900 text-white"
                 : "border-edge bg-surface text-muted hover:text-foreground"
@@ -82,9 +86,13 @@ function TravelerFilter({ active }: { active: string | null }) {
 }
 
 function LegHeading({ legId }: { legId: string }) {
-  const leg = legById(legId) ?? LEGS[LEGS.length - 1];
+  const leg = legById(legId);
+  // "Unscheduled / No date set" is noise: the day heading already says the
+  // date is missing, so anything not on a known leg gets no heading at all.
+  if (!leg || leg.id === "unscheduled") return null;
+
   return (
-    <div className="mt-8 flex items-baseline gap-2 first:mt-0">
+    <div className="mt-8 flex flex-wrap items-baseline gap-x-2 first:mt-0">
       <h2 className="text-sm font-semibold tracking-wide uppercase">
         {leg.label}
       </h2>

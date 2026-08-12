@@ -31,11 +31,17 @@ body {
   color: var(--foreground);
 }
 
-/* Shared form styling, so every input in the app matches without repetition. */
+/*
+ * Shared form styling, so every input in the app matches without repetition.
+ *
+ * text-base below the `sm` breakpoint is deliberate: iOS Safari zooms the page
+ * in whenever a focused input's font is under 16px, which on a form this long
+ * means fighting the viewport at every field.
+ */
 .field {
-  @apply w-full rounded-lg border border-edge bg-surface px-3 py-2 text-sm
+  @apply w-full rounded-lg border border-edge bg-surface px-3 py-2.5 text-base
     outline-none transition focus:border-stone-400 focus:ring-2
-    focus:ring-stone-200;
+    focus:ring-stone-200 sm:py-2 sm:text-sm;
 }
 
 .label {
