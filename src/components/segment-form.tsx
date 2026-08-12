@@ -83,8 +83,8 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
                 key={option.id}
                 className={`cursor-pointer rounded-lg border px-3 py-1.5 text-sm transition ${
                   kind === option.id
-                    ? "border-stone-900 bg-stone-900 text-white dark:border-stone-100 dark:bg-stone-100 dark:text-stone-900"
-                    : "border-edge bg-surface hover:bg-stone-100 dark:hover:bg-stone-800"
+                    ? "border-stone-900 bg-stone-900 text-white"
+                    : "border-edge bg-surface hover:bg-stone-100"
                 }`}
               >
                 <input
@@ -359,7 +359,7 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
         </div>
 
         {state.error && (
-          <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>
+          <p className="text-sm text-red-600">{state.error}</p>
         )}
 
         <div className="flex items-center gap-2">

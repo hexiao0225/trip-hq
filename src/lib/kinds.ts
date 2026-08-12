@@ -27,7 +27,7 @@ export const KINDS: KindMeta[] = [
     ranged: false,
     fromLabel: "From (airport)",
     toLabel: "To (airport)",
-    chipClass: "bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200",
+    chipClass: "bg-sky-100 text-sky-900",
   },
   {
     id: "train",
@@ -36,8 +36,7 @@ export const KINDS: KindMeta[] = [
     ranged: false,
     fromLabel: "From (station)",
     toLabel: "To (station)",
-    chipClass:
-      "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+    chipClass: "bg-emerald-100 text-emerald-900",
   },
   {
     id: "hotel",
@@ -46,8 +45,7 @@ export const KINDS: KindMeta[] = [
     ranged: true,
     fromLabel: null,
     toLabel: null,
-    chipClass:
-      "bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200",
+    chipClass: "bg-violet-100 text-violet-900",
   },
   {
     id: "car",
@@ -56,8 +54,7 @@ export const KINDS: KindMeta[] = [
     ranged: true,
     fromLabel: "Pick-up",
     toLabel: "Drop-off",
-    chipClass:
-      "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+    chipClass: "bg-amber-100 text-amber-900",
   },
   {
     id: "ferry",
@@ -66,7 +63,7 @@ export const KINDS: KindMeta[] = [
     ranged: false,
     fromLabel: "From (port)",
     toLabel: "To (port)",
-    chipClass: "bg-cyan-100 text-cyan-900 dark:bg-cyan-950 dark:text-cyan-200",
+    chipClass: "bg-cyan-100 text-cyan-900",
   },
   {
     id: "activity",
@@ -75,7 +72,7 @@ export const KINDS: KindMeta[] = [
     ranged: true,
     fromLabel: null,
     toLabel: null,
-    chipClass: "bg-pink-100 text-pink-900 dark:bg-pink-950 dark:text-pink-200",
+    chipClass: "bg-pink-100 text-pink-900",
   },
   {
     id: "note",
@@ -84,8 +81,7 @@ export const KINDS: KindMeta[] = [
     ranged: false,
     fromLabel: null,
     toLabel: null,
-    chipClass:
-      "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-200",
+    chipClass: "bg-slate-100 text-slate-900",
   },
 ];
 

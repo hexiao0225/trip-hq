@@ -12,10 +12,10 @@ import {
 import { formatDayHeading } from "@/lib/time";
 
 const STATUS_STYLES: Record<string, string> = {
-  parsed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
-  pending: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
-  failed: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
-  ignored: "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300",
+  parsed: "bg-emerald-100 text-emerald-800",
+  pending: "bg-amber-100 text-amber-800",
+  failed: "bg-red-100 text-red-800",
+  ignored: "bg-stone-100 text-stone-700",
 };
 
 function EmailRow({ email }: { email: InboundEmail }) {
@@ -44,13 +44,27 @@ function EmailRow({ email }: { email: InboundEmail }) {
           Re-parse
         </button>
       </form>
+
+      {/*
+        The original text, for working out why a parse came out wrong — and for
+        reading one-off codes, such as the confirmation Gmail sends when you set
+        up an automatic forwarding rule to this address.
+      */}
+      <details className="w-full">
+        <summary className="cursor-pointer text-xs text-muted select-none hover:text-foreground">
+          View original email
+        </summary>
+        <pre className="mt-2 max-h-80 overflow-auto rounded-lg border border-edge bg-background p-3 text-xs whitespace-pre-wrap">
+          {email.body}
+        </pre>
+      </details>
     </li>
   );
 }
 
 function PendingItem({ segment }: { segment: Segment }) {
   return (
-    <div className="rounded-xl border border-amber-300 bg-amber-50/50 p-2 dark:border-amber-900 dark:bg-amber-950/20">
+    <div className="rounded-xl border border-amber-300 bg-amber-50/50 p-2">
       <SegmentCard segment={segment} />
 
       <div className="mt-2 flex flex-wrap items-center gap-2 px-2 pb-1">

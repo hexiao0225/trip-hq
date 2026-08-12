@@ -66,7 +66,7 @@ function TravelerFilter({ active }: { active: string | null }) {
             href={option.id ? `/?who=${option.id}` : "/"}
             className={`rounded-full border px-3 py-1.5 text-sm transition ${
               selected
-                ? "border-stone-900 bg-stone-900 text-white dark:border-stone-100 dark:bg-stone-100 dark:text-stone-900"
+                ? "border-stone-900 bg-stone-900 text-white"
                 : "border-edge bg-surface text-muted hover:text-foreground"
             }`}
           >

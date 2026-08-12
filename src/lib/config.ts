@@ -21,13 +21,13 @@ export const TRAVELERS: Traveler[] = [
     id: "xiao",
     name: "Xiao",
     initial: "X",
-    badgeClass: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200",
+    badgeClass: "bg-rose-100 text-rose-800",
   },
   {
     id: "husband",
     name: "Husband",
     initial: "H",
-    badgeClass: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
+    badgeClass: "bg-sky-100 text-sky-800",
   },
 ];
 

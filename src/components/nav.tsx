@@ -12,14 +12,14 @@ export function Nav({ pendingCount }: { pendingCount: number }) {
 
         <Link
           href="/"
-          className="rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-stone-100 hover:text-foreground dark:hover:bg-stone-800"
+          className="rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-stone-100 hover:text-foreground"
         >
           Timeline
         </Link>
 
         <Link
           href="/inbox"
-          className="relative rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-stone-100 hover:text-foreground dark:hover:bg-stone-800"
+          className="relative rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-stone-100 hover:text-foreground"
         >
           Review
           {pendingCount > 0 && (
@@ -36,7 +36,7 @@ export function Nav({ pendingCount }: { pendingCount: number }) {
         <form action={logout}>
           <button
             type="submit"
-            className="rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-stone-100 hover:text-foreground dark:hover:bg-stone-800"
+            className="rounded-lg px-2.5 py-1.5 text-sm text-muted transition hover:bg-stone-100 hover:text-foreground"
           >
             Sign out
           </button>

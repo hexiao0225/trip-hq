@@ -87,7 +87,7 @@ export function SegmentCard({ segment }: { segment: Segment }) {
   return (
     <Link
       href={`/segment/${segment.id}`}
-      className={`block rounded-xl border border-edge bg-surface p-4 transition hover:border-stone-300 hover:shadow-sm dark:hover:border-stone-600 ${
+      className={`block rounded-xl border border-edge bg-surface p-4 transition hover:border-stone-300 hover:shadow-sm ${
         cancelled ? "opacity-55" : ""
       }`}
     >
@@ -104,7 +104,7 @@ export function SegmentCard({ segment }: { segment: Segment }) {
               {meta.label}
             </span>
             {cancelled && (
-              <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-red-700 uppercase dark:bg-red-950 dark:text-red-300">
+              <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-red-700 uppercase">
                 Cancelled
               </span>
             )}
