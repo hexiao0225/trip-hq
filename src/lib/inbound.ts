@@ -54,7 +54,34 @@ function parseDate(value: unknown): Date {
 
 type Payload = Record<string, unknown>;
 
+/**
+ * Email headers repeat legitimately (Received, and others), so CloudMailin
+ * sends a string for single occurrences and an array when there are several.
+ */
+function headerValue(headers: Payload | undefined, key: string): string | null {
+  const raw = headers?.[key];
+  if (Array.isArray(raw)) return firstString(...raw);
+  return firstString(raw);
+}
+
 export function normalizeJsonPayload(payload: Payload): NormalizedEmail {
+  // CloudMailin: envelope + headers + plain/html.
+  if ("envelope" in payload && "headers" in payload) {
+    const envelope = payload.envelope as Payload | undefined;
+    const headers = payload.headers as Payload | undefined;
+    return {
+      provider: "cloudmailin",
+      externalId: headerValue(headers, "Message-ID"),
+      fromAddress:
+        headerValue(headers, "From") ?? firstString(envelope?.from),
+      toAddress: headerValue(headers, "To") ?? firstString(envelope?.to),
+      subject: headerValue(headers, "Subject"),
+      text: firstString(payload.plain) ?? "",
+      html: firstString(payload.html),
+      receivedAt: parseDate(headerValue(headers, "Date")),
+    };
+  }
+
   // Postmark: capitalised keys, TextBody/HtmlBody.
   if ("TextBody" in payload || "HtmlBody" in payload || "FromFull" in payload) {
     const fromFull = payload.FromFull as Payload | undefined;

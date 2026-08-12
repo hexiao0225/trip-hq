@@ -55,20 +55,24 @@ generated SQL also lives in `drizzle/` if you'd rather apply it by hand.
 ## Setting up the email address
 
 The webhook at `POST /api/inbound/email` is deliberately provider-agnostic — it
-understands Postmark, Resend, SendGrid, and a plain JSON post from a Cloudflare
-Email Worker. Point whichever you prefer at:
+understands CloudMailin, Postmark, Resend, SendGrid, and a plain JSON post from a
+Cloudflare Email Worker. Point whichever you prefer at:
 
 ```
 https://<your-app>.vercel.app/api/inbound/email?token=<INBOUND_WEBHOOK_SECRET>
 ```
 
-**Postmark** is the least work: it hands you a free address like
-`abc123@inbound.postmarkapp.com` with no domain required. Create a server, open
-the inbound stream, and paste the URL above as the webhook. Forward confirmations
-to that address and they'll show up under **Review** within a minute.
+**[CloudMailin](https://www.cloudmailin.com)** is the least work and the one to
+start with: a free account hands you an address immediately, with no domain, no
+credit card, and no company email address required. Create an address, paste the
+URL above as its target, and set the format to **JSON**. Forward confirmations
+there and they show up under **Review** within a minute.
 
-If you already own a domain, Cloudflare Email Routing plus a small Worker gives
-you a nicer address (`trips@yourdomain.com`) that forwards to the same endpoint.
+**Postmark** also gives you a free `@inbound.postmarkapp.com` address, but its
+signup rejects consumer email domains — you need a company address to get in.
+
+If you own a domain, Cloudflare Email Routing gives you a nicer address
+(`trips@yourdomain.com`) that can forward to the CloudMailin one.
 
 Check the wiring any time by opening the URL above in a browser — a `GET`
 with the right token returns `{"ok":true}`.
