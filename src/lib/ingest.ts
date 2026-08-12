@@ -1,9 +1,14 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
-import { inboundEmails, segments, type NewSegment } from "@/lib/db/schema";
+import {
+  inboundEmails,
+  segments,
+  type NewSegment,
+  type Segment,
+} from "@/lib/db/schema";
 import type { NormalizedEmail } from "@/lib/inbound";
 import { parseBookingEmail, type ParsedSegment } from "@/lib/parse-email";
 import { localInputToDate } from "@/lib/time";
@@ -76,7 +81,7 @@ function toSegmentRow(
     fromCity: parsed.fromCity,
     toCity: parsed.toCity,
     address: parsed.address,
-    travelers: parsed.travelers.length ? parsed.travelers : ["xiao", "husband"],
+    travelers: parsed.travelers.length ? parsed.travelers : ["xiao", "hanyang"],
     leg: null,
     // Everything from email lands in the review queue rather than the timeline.
     status: "pending",
@@ -87,6 +92,66 @@ function toSegmentRow(
     sourceEmailId: emailId,
     details,
   };
+}
+
+/**
+ * An airline typically sends the itinerary and the receipt as two separate
+ * emails for one booking, so forwarding both would otherwise put the same
+ * flight on the timeline twice.
+ *
+ * Both the confirmation number and the exact departure instant have to match:
+ * a confirmation alone is not enough, because a round trip shares one
+ * reference across its legs.
+ */
+async function findDuplicate(row: NewSegment): Promise<Segment | undefined> {
+  const reference = row.confirmation?.trim();
+  if (!reference || !row.startAt) return undefined;
+
+  const matches = await getDb()
+    .select()
+    .from(segments)
+    .where(
+      and(
+        sql`lower(trim(${segments.confirmation})) = ${reference.toLowerCase()}`,
+        eq(segments.startAt, row.startAt),
+      ),
+    )
+    .limit(1);
+
+  return matches[0];
+}
+
+/**
+ * The two emails usually carry different details — the receipt has the fare the
+ * itinerary lacked — so fill the gaps on the row we already have rather than
+ * overwriting it. Never touches a field that already has a value, so anything
+ * edited by hand survives.
+ */
+function enrichment(existing: Segment, incoming: NewSegment) {
+  const patch: Partial<NewSegment> = {};
+
+  if (!existing.vendor && incoming.vendor) patch.vendor = incoming.vendor;
+  if (!existing.fromLabel && incoming.fromLabel)
+    patch.fromLabel = incoming.fromLabel;
+  if (!existing.toLabel && incoming.toLabel) patch.toLabel = incoming.toLabel;
+  if (!existing.fromCity && incoming.fromCity)
+    patch.fromCity = incoming.fromCity;
+  if (!existing.toCity && incoming.toCity) patch.toCity = incoming.toCity;
+  if (!existing.address && incoming.address) patch.address = incoming.address;
+  if (!existing.costAmount && incoming.costAmount)
+    patch.costAmount = incoming.costAmount;
+  if (!existing.costCurrency && incoming.costCurrency)
+    patch.costCurrency = incoming.costCurrency;
+  if (!existing.notes && incoming.notes) patch.notes = incoming.notes;
+  if (!existing.link && incoming.link) patch.link = incoming.link;
+
+  // Existing detail values win on conflict, but new keys are added.
+  const details = { ...incoming.details, ...existing.details };
+  if (Object.keys(details).length > Object.keys(existing.details).length) {
+    patch.details = details;
+  }
+
+  return patch;
 }
 
 /**
@@ -130,22 +195,48 @@ export async function processEmail(emailId: string): Promise<number> {
     // replaces its results instead of duplicating them.
     await getDb().delete(segments).where(eq(segments.sourceEmailId, emailId));
 
-    if (newRows.length > 0) {
-      await getDb().insert(segments).values(newRows);
+    let created = 0;
+    let merged = 0;
+
+    for (const row of newRows) {
+      const existing = await findDuplicate(row);
+
+      if (existing) {
+        const patch = enrichment(existing, row);
+        if (Object.keys(patch).length > 0) {
+          await getDb()
+            .update(segments)
+            .set({ ...patch, updatedAt: new Date() })
+            .where(eq(segments.id, existing.id));
+        }
+        merged += 1;
+      } else {
+        await getDb().insert(segments).values(row);
+        created += 1;
+      }
+    }
+
+    const notes: string[] = [];
+    if (truncated) {
+      notes.push("Email was long and only the first part was read.");
+    }
+    if (merged > 0) {
+      notes.push(
+        `${merged} booking${merged === 1 ? "" : "s"} already on the trip; ` +
+          "filled in any missing details rather than adding a duplicate.",
+      );
     }
 
     await getDb()
       .update(inboundEmails)
       .set({
         parseStatus: "parsed",
-        parseError: truncated
-          ? "Email was long and only the first part was read."
-          : null,
-        segmentCount: String(newRows.length),
+        parseError: notes.length > 0 ? notes.join(" ") : null,
+        segmentCount: String(created),
       })
       .where(eq(inboundEmails.id, emailId));
 
-    return newRows.length;
+    return created;
   } catch (error) {
     const messageText =
       error instanceof Error ? error.message : "Unknown parse error";

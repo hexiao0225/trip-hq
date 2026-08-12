@@ -11,7 +11,7 @@ import {
   checkPasscode,
   createSessionToken,
 } from "@/lib/auth";
-import { TRAVELER_IDS } from "@/lib/config";
+import { EVERYONE_IDS } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { segments } from "@/lib/db/schema";
 import { processEmail } from "@/lib/ingest";
@@ -62,7 +62,7 @@ function readTravelers(formData: FormData): string[] {
   return formData
     .getAll("travelers")
     .map(String)
-    .filter((id) => TRAVELER_IDS.includes(id));
+    .filter((id) => EVERYONE_IDS.includes(id));
 }
 
 function optional(formData: FormData, key: string): string | null {

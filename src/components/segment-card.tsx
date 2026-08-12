@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { travelerById } from "@/lib/config";
+import { companionById } from "@/lib/config";
 import type { Segment } from "@/lib/db/schema";
 import { kindMeta } from "@/lib/kinds";
 import {
@@ -15,7 +15,7 @@ function TravelerBadges({ ids }: { ids: string[] }) {
   return (
     <span className="flex gap-1">
       {ids.map((id) => {
-        const traveler = travelerById(id);
+        const traveler = companionById(id);
         if (!traveler) return null;
         return (
           <span

@@ -5,7 +5,12 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { deleteSegment, saveSegment, type FormState } from "@/app/actions";
-import { SELECTABLE_LEGS, TIMEZONE_OPTIONS, TRAVELERS } from "@/lib/config";
+import {
+  PETS,
+  SELECTABLE_LEGS,
+  TIMEZONE_OPTIONS,
+  TRAVELERS,
+} from "@/lib/config";
 import { KINDS, SEGMENT_STATUSES, kindMeta } from "@/lib/kinds";
 
 export interface SegmentFormValues {
@@ -235,7 +240,9 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
           </div>
         </div>
 
-        {(meta.id === "hotel" || meta.id === "activity") && (
+        {(meta.id === "hotel" ||
+          meta.id === "activity" ||
+          meta.id === "pet") && (
           <div>
             <label className="label" htmlFor="address">
               Address
@@ -250,8 +257,8 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
         )}
 
         <div>
-          <span className="label">Who&apos;s on this</span>
-          <div className="flex flex-wrap gap-3">
+          <span className="label">Who&apos;s this for</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {TRAVELERS.map((traveler) => (
               <label
                 key={traveler.id}
@@ -265,6 +272,26 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
                   className="h-4 w-4 rounded border-edge"
                 />
                 {traveler.name}
+              </label>
+            ))}
+
+            <span aria-hidden className="text-edge">
+              |
+            </span>
+
+            {PETS.map((pet) => (
+              <label
+                key={pet.id}
+                className="flex cursor-pointer items-center gap-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  name="travelers"
+                  value={pet.id}
+                  defaultChecked={initial.travelers.includes(pet.id)}
+                  className="h-4 w-4 rounded border-edge"
+                />
+                🐕 {pet.name}
               </label>
             ))}
           </div>

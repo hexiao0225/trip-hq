@@ -4,7 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import * as z from "zod/v4";
 
-import { TRAVELERS } from "@/lib/config";
+import { PETS, TRAVELERS } from "@/lib/config";
 import { KIND_IDS } from "@/lib/kinds";
 
 /**
@@ -18,8 +18,20 @@ import { KIND_IDS } from "@/lib/kinds";
 
 const ParsedSegmentSchema = z.object({
   kind: z
-    .enum(["flight", "train", "hotel", "car", "ferry", "activity", "note"])
-    .describe("The type of booking this segment represents."),
+    .enum([
+      "flight",
+      "train",
+      "hotel",
+      "car",
+      "ferry",
+      "activity",
+      "pet",
+      "note",
+    ])
+    .describe(
+      "The type of booking this segment represents. Use 'pet' for dog " +
+        "boarding, sitting, daycare, or a vet appointment.",
+    ),
   title: z
     .string()
     .describe(
@@ -83,11 +95,11 @@ const ParsedSegmentSchema = z.object({
     .nullable()
     .describe("Street address, for stays and activities."),
   travelers: z
-    .array(z.enum(["xiao", "husband"]))
+    .array(z.enum(["xiao", "hanyang", "zero", "totoro"]))
     .describe(
-      "Which travelers this booking covers, matched by the names given in " +
-        "the system prompt. Use both ids when the booking names both or is " +
-        "ambiguous.",
+      "Who this booking covers, matched by the names given in the system " +
+        "prompt. Use both people when the booking names both or is ambiguous. " +
+        "A pet booking covers the dogs it names, and no people.",
     ),
   costAmount: z
     .string()
@@ -140,10 +152,15 @@ const travelerRoster = TRAVELERS.map(
   (t) => `- id "${t.id}" — ${t.name}`,
 ).join("\n");
 
+const petRoster = PETS.map((p) => `- id "${p.id}" — ${p.name}`).join("\n");
+
 const SYSTEM_PROMPT = `You extract travel bookings from forwarded confirmation emails for a two-person trip planner.
 
 The travelers are:
 ${travelerRoster}
+
+They also have two dogs, who stay behind and have their own boarding and vet arrangements:
+${petRoster}
 
 Guidelines:
 - Produce one segment per distinct bookable item. A round trip is two flights; a multi-city hotel booking with two properties is two stays.

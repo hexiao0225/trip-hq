@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { SegmentCard } from "@/components/segment-card";
 import { SetupNotice } from "@/components/setup-notice";
-import { LEGS, MILESTONES, TRAVELERS, legById } from "@/lib/config";
+import { LEGS, MILESTONES, PETS, TRAVELERS, legById } from "@/lib/config";
 import type { Segment } from "@/lib/db/schema";
 import {
   filterByTraveler,
@@ -54,6 +54,9 @@ function TravelerFilter({ active }: { active: string | null }) {
   const options = [
     { id: null, label: "Everyone" },
     ...TRAVELERS.map((t) => ({ id: t.id as string | null, label: t.name })),
+    // The dogs stay home, but their boarding runs alongside the trip and is
+    // worth being able to isolate.
+    ...PETS.map((p) => ({ id: p.id as string | null, label: `🐕 ${p.name}` })),
   ];
 
   return (

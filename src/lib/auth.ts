@@ -118,12 +118,16 @@ function expectedSecret(name: string): string | null {
   return trimmed ? trimmed : null;
 }
 
+/**
+ * The answer to the sign-in question. Compared case-insensitively so "Zero"
+ * and "zero" both work if the answer is ever changed to a word.
+ */
 export function checkPasscode(input: string): boolean {
   const expected = expectedSecret("APP_PASSCODE");
   if (!expected) {
     throw new Error("APP_PASSCODE is not set.");
   }
-  return safeEqual(input.trim(), expected);
+  return safeEqual(input.trim().toLowerCase(), expected.toLowerCase());
 }
 
 /**

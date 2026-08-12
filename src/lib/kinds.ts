@@ -5,6 +5,7 @@ export type SegmentKind =
   | "car"
   | "ferry"
   | "activity"
+  | "pet"
   | "note";
 
 export interface KindMeta {
@@ -73,6 +74,15 @@ export const KINDS: KindMeta[] = [
     fromLabel: null,
     toLabel: null,
     chipClass: "bg-pink-100 text-pink-900",
+  },
+  {
+    id: "pet",
+    label: "Pet stay",
+    icon: "🐕",
+    ranged: true,
+    fromLabel: null,
+    toLabel: null,
+    chipClass: "bg-teal-100 text-teal-900",
   },
   {
     id: "note",

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { login, type FormState } from "@/app/actions";
+import { SECURITY_QUESTION } from "@/lib/config";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -23,7 +24,7 @@ export function LoginForm({ next }: { next: string }) {
 
       <div>
         <label className="label" htmlFor="passcode">
-          Passcode
+          {SECURITY_QUESTION}
         </label>
         <input
           id="passcode"

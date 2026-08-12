@@ -1,22 +1,26 @@
 /**
  * Trip configuration.
  *
- * This is the one file to edit as plans firm up: traveler names, the legs of
+ * This is the one file to edit as plans firm up: who's involved, the legs of
  * the trip, and their date ranges. Everything else in the app derives from it.
  */
 
-export type TravelerId = "xiao" | "husband";
+export type TravelerId = "xiao" | "hanyang";
+export type PetId = "zero" | "totoro";
 
-export interface Traveler {
-  id: TravelerId;
+/** Anyone a segment can belong to — people and dogs alike. */
+export type WhoId = TravelerId | PetId;
+
+export interface Companion {
+  id: WhoId;
   name: string;
   /** Single letter used in compact badges. */
   initial: string;
-  /** Tailwind classes for this traveler's badge. */
+  /** Tailwind classes for this companion's badge. */
   badgeClass: string;
 }
 
-export const TRAVELERS: Traveler[] = [
+export const TRAVELERS: Companion[] = [
   {
     id: "xiao",
     name: "Xiao",
@@ -24,17 +28,44 @@ export const TRAVELERS: Traveler[] = [
     badgeClass: "bg-rose-100 text-rose-800",
   },
   {
-    id: "husband",
-    name: "Husband",
+    id: "hanyang",
+    name: "Hanyang",
     initial: "H",
     badgeClass: "bg-sky-100 text-sky-800",
   },
 ];
 
-export const TRAVELER_IDS: string[] = TRAVELERS.map((t) => t.id);
+/**
+ * The dogs. They don't travel, but they need their own schedule — boarding,
+ * sitter visits, vet appointments — running alongside the trip.
+ */
+export const PETS: Companion[] = [
+  {
+    id: "zero",
+    name: "Zero",
+    initial: "Z",
+    badgeClass: "bg-teal-100 text-teal-800",
+  },
+  {
+    id: "totoro",
+    name: "Totoro",
+    initial: "T",
+    badgeClass: "bg-lime-100 text-lime-800",
+  },
+];
 
-export function travelerById(id: string): Traveler | undefined {
-  return TRAVELERS.find((t) => t.id === id);
+export const EVERYONE: Companion[] = [...TRAVELERS, ...PETS];
+
+export const TRAVELER_IDS: string[] = TRAVELERS.map((t) => t.id);
+export const PET_IDS: string[] = PETS.map((p) => p.id);
+export const EVERYONE_IDS: string[] = EVERYONE.map((c) => c.id);
+
+export function companionById(id: string): Companion | undefined {
+  return EVERYONE.find((c) => c.id === id);
+}
+
+export function isPet(id: string): boolean {
+  return PET_IDS.includes(id);
 }
 
 export type LegId =
@@ -56,8 +87,8 @@ export interface Leg {
   start: string | null;
   /** Inclusive end date, YYYY-MM-DD. Null means "not decided yet". */
   end: string | null;
-  /** Which travelers are on this leg. */
-  travelers: TravelerId[];
+  /** Who is on this leg. */
+  travelers: WhoId[];
   accentClass: string;
 }
 
@@ -73,7 +104,7 @@ export const LEGS: Leg[] = [
     timezone: "Europe/London",
     start: null,
     end: null,
-    travelers: ["xiao", "husband"],
+    travelers: ["xiao", "hanyang"],
     accentClass: "border-l-indigo-400",
   },
   {
@@ -83,13 +114,13 @@ export const LEGS: Leg[] = [
     timezone: "Europe/London",
     start: null,
     end: null,
-    travelers: ["xiao", "husband"],
+    travelers: ["xiao", "hanyang"],
     accentClass: "border-l-emerald-400",
   },
   {
     id: "residency",
     label: "Residency",
-    place: "Artist residency",
+    place: "Dumfries House, Ayrshire",
     timezone: "Europe/London",
     start: null,
     end: "2026-09-24",
@@ -103,7 +134,7 @@ export const LEGS: Leg[] = [
     timezone: "Asia/Shanghai",
     start: null,
     end: null,
-    travelers: ["husband"],
+    travelers: ["hanyang"],
     accentClass: "border-l-fuchsia-400",
   },
   {
@@ -113,7 +144,7 @@ export const LEGS: Leg[] = [
     timezone: "America/Los_Angeles",
     start: null,
     end: null,
-    travelers: ["xiao", "husband"],
+    travelers: ["xiao", "hanyang"],
     accentClass: "border-l-slate-400",
   },
   {
@@ -123,7 +154,7 @@ export const LEGS: Leg[] = [
     timezone: "America/Los_Angeles",
     start: null,
     end: null,
-    travelers: ["xiao", "husband"],
+    travelers: ["xiao", "hanyang"],
     accentClass: "border-l-slate-300",
   },
 ];
@@ -145,7 +176,7 @@ export interface Milestone {
   /** YYYY-MM-DD, interpreted in `timezone`. */
   date: string;
   timezone: string;
-  who: TravelerId[];
+  who: WhoId[];
 }
 
 export const MILESTONES: Milestone[] = [
@@ -162,6 +193,12 @@ export const MILESTONES: Milestone[] = [
     who: ["xiao"],
   },
 ];
+
+/**
+ * The sign-in prompt. Only the question lives here — the answer stays in the
+ * APP_PASSCODE environment variable so it is never committed to the repo.
+ */
+export const SECURITY_QUESTION = "What is our first dog's name (in number)?";
 
 /** Timezones offered in the segment form, in the order they appear. */
 export const TIMEZONE_OPTIONS = [
