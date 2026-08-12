@@ -20,6 +20,8 @@ export interface SegmentFormValues {
   endTz: string;
   fromLabel: string;
   toLabel: string;
+  fromCity: string;
+  toCity: string;
   address: string;
   travelers: string[];
   leg: string;
@@ -42,6 +44,8 @@ export const EMPTY_SEGMENT: SegmentFormValues = {
   endTz: "",
   fromLabel: "",
   toLabel: "",
+  fromCity: "",
+  toCity: "",
   address: "",
   travelers: TRAVELERS.map((t) => t.id),
   leg: "",
@@ -136,6 +140,30 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
                 id="toLabel"
                 name="toLabel"
                 defaultValue={initial.toLabel}
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="fromCity">
+                From city
+              </label>
+              <input
+                id="fromCity"
+                name="fromCity"
+                defaultValue={initial.fromCity}
+                placeholder="San Francisco"
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="toCity">
+                To city
+              </label>
+              <input
+                id="toCity"
+                name="toCity"
+                defaultValue={initial.toCity}
+                placeholder="London"
                 className="field"
               />
             </div>

@@ -66,6 +66,18 @@ const ParsedSegmentSchema = z.object({
     .string()
     .nullable()
     .describe("Destination: airport/station code or drop-off location."),
+  fromCity: z
+    .string()
+    .nullable()
+    .describe(
+      "City the journey starts in, in plain English — 'San Francisco', " +
+        "'London', 'Beijing'. Give the city even when the email only prints " +
+        "an airport code, and use the city rather than the airport's name.",
+    ),
+  toCity: z
+    .string()
+    .nullable()
+    .describe("City the journey ends in, same convention as fromCity."),
   address: z
     .string()
     .nullable()

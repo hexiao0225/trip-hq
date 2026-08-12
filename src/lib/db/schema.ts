@@ -36,6 +36,13 @@ export const segments = pgTable(
     /** "SFO" / "The Hoxton, Shoreditch" — free text, shown as the from/to pair. */
     fromLabel: text("from_label"),
     toLabel: text("to_label"),
+    /**
+     * The city each end of a journey is in ("San Francisco", "London"). An
+     * airport code alone is unreadable for anywhere you don't already know, so
+     * the card shows the city and keeps the code as the qualifier.
+     */
+    fromCity: text("from_city"),
+    toCity: text("to_city"),
     address: text("address"),
 
     /** Which travelers this applies to, e.g. ["xiao","husband"]. */

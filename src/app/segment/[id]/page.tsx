@@ -21,6 +21,8 @@ function toFormValues(segment: Segment): SegmentFormValues {
     endTz: segment.endTz ?? "",
     fromLabel: segment.fromLabel ?? "",
     toLabel: segment.toLabel ?? "",
+    fromCity: segment.fromCity ?? "",
+    toCity: segment.toCity ?? "",
     address: segment.address ?? "",
     travelers: segment.travelers,
     leg: segment.leg ?? "",

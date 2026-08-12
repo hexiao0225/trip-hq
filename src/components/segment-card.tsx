@@ -32,6 +32,25 @@ function TravelerBadges({ ids }: { ids: string[] }) {
 }
 
 /**
+ * "San Francisco (SFO)" — city first, since the code is only meaningful if you
+ * already know it. Falls back to whichever half exists.
+ */
+function endpointLabel(
+  city: string | null,
+  label: string | null,
+): string {
+  const cityName = city?.trim();
+  const code = label?.trim();
+  if (cityName && code) {
+    // Don't repeat "London (London King's Cross)".
+    return code.toLowerCase().includes(cityName.toLowerCase())
+      ? code
+      : `${cityName} (${code})`;
+  }
+  return cityName || code || "?";
+}
+
+/**
  * Describes when the segment happens, in words that suit its kind: a duration
  * for flights, a night count for stays, a plain time for everything else.
  */
@@ -43,11 +62,12 @@ function Timing({ segment }: { segment: Segment }) {
     return <span className="text-muted">No date set</span>;
   }
 
-  const start = formatTimeWithZone(startAt, startTz);
+  const start = formatTimeWithZone(startAt, startTz, segment.fromCity);
 
   if (!endAt) return <span>{start}</span>;
 
   const arrivalZone = endTz ?? startTz;
+  const arrivalCity = segment.toCity ?? segment.fromCity;
 
   // Stays and hires span days, so a night/day count reads better than the
   // raw duration a flight would want ("4 days", not "96h").
@@ -69,7 +89,7 @@ function Timing({ segment }: { segment: Segment }) {
 
   const sameDay =
     formatDate(startAt, startTz) === formatDate(endAt, arrivalZone);
-  const end = formatTimeWithZone(endAt, arrivalZone);
+  const end = formatTimeWithZone(endAt, arrivalZone, arrivalCity);
   const duration = formatDuration(startAt, endAt);
 
   return (
@@ -119,7 +139,8 @@ export function SegmentCard({ segment }: { segment: Segment }) {
 
           {(segment.fromLabel || segment.toLabel) && (
             <p className="mt-0.5 text-sm text-muted">
-              {segment.fromLabel ?? "?"} → {segment.toLabel ?? "?"}
+              {endpointLabel(segment.fromCity, segment.fromLabel)} →{" "}
+              {endpointLabel(segment.toCity, segment.toLabel)}
             </p>
           )}
 

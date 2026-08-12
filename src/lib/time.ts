@@ -19,10 +19,27 @@ export function formatTime(date: Date, timezone: string): string {
   return inZone(date, timezone).toFormat("HH:mm");
 }
 
-/** "14:35 BST" — the abbreviation matters when comparing legs across zones. */
-export function formatTimeWithZone(date: Date, timezone: string): string {
-  const dt = inZone(date, timezone);
-  return `${dt.toFormat("HH:mm")} ${dt.toFormat("ZZZZ")}`;
+/**
+ * The city an IANA zone is named after — "Europe/London" becomes "London".
+ *
+ * Used to label a time when the segment has no city of its own. Timezone
+ * abbreviations were the obvious choice here and turn out not to work: no
+ * single locale renders them all well (en-US gives "PDT" but "GMT+1" for
+ * London; en-GB gives "BST" but "GMT-7" for Los Angeles), and an offset tells
+ * you nothing about where the time is local to.
+ */
+export function zoneCity(timezone: string): string {
+  const tail = (timezone || "").split("/").pop() ?? "";
+  return tail.replace(/_/g, " ") || timezone;
+}
+
+/** "14:35 London" — says plainly which place the clock time belongs to. */
+export function formatTimeWithZone(
+  date: Date,
+  timezone: string,
+  city?: string | null,
+): string {
+  return `${formatTime(date, timezone)} ${city?.trim() || zoneCity(timezone)}`;
 }
 
 /** Stable key for grouping segments into days, in the segment's own zone. */

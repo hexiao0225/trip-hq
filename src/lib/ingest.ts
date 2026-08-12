@@ -73,6 +73,8 @@ function toSegmentRow(
     endTz: endAt ? endTz : null,
     fromLabel: parsed.fromLabel,
     toLabel: parsed.toLabel,
+    fromCity: parsed.fromCity,
+    toCity: parsed.toCity,
     address: parsed.address,
     travelers: parsed.travelers.length ? parsed.travelers : ["xiao", "husband"],
     leg: null,

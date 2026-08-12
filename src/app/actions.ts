@@ -107,6 +107,8 @@ export async function saveSegment(
     endTz: endAt ? endTz : null,
     fromLabel: optional(formData, "fromLabel"),
     toLabel: optional(formData, "toLabel"),
+    fromCity: optional(formData, "fromCity"),
+    toCity: optional(formData, "toCity"),
     address: optional(formData, "address"),
     travelers,
     leg: optional(formData, "leg"),
