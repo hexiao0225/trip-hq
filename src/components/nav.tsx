@@ -19,6 +19,13 @@ export function Nav({ pendingCount }: { pendingCount: number }) {
         </Link>
 
         <Link
+          href="/map"
+          className="flex min-h-11 items-center rounded-lg px-2.5 text-sm text-muted transition hover:bg-stone-100 hover:text-foreground"
+        >
+          Map
+        </Link>
+
+        <Link
           href="/inbox"
           className="flex min-h-11 items-center rounded-lg px-2.5 text-sm text-muted transition hover:bg-stone-100 hover:text-foreground"
         >

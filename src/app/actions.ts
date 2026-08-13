@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/auth";
 import { EVERYONE_IDS } from "@/lib/config";
 import { getDb } from "@/lib/db";
+import { geocodePlace } from "@/lib/geocode";
 import { segments } from "@/lib/db/schema";
 import { processEmail } from "@/lib/ingest";
 import { KIND_IDS } from "@/lib/kinds";
@@ -157,6 +158,40 @@ export async function discardSegment(formData: FormData) {
   if (!id) return;
   await getDb().delete(segments).where(eq(segments.id, id));
   revalidatePath("/inbox");
+}
+
+/**
+ * Fill in coordinates for anything the map can't place yet.
+ *
+ * Paced at roughly one lookup per second by the geocoder, so this is a
+ * deliberate button rather than something that runs on page load. Each segment
+ * is marked as attempted either way, so a place that simply can't be found
+ * isn't retried on every visit.
+ */
+export async function locateSegments() {
+  const rows = await getDb()
+    .select()
+    .from(segments)
+    .where(isNull(segments.geocodedAt))
+    .limit(12);
+
+  for (const row of rows) {
+    const from = await geocodePlace(row.fromLabel, row.fromCity, null);
+    const to = await geocodePlace(row.toLabel, row.toCity, row.address);
+
+    await getDb()
+      .update(segments)
+      .set({
+        fromLat: from?.lat ?? null,
+        fromLng: from?.lng ?? null,
+        toLat: to?.lat ?? null,
+        toLng: to?.lng ?? null,
+        geocodedAt: new Date(),
+      })
+      .where(eq(segments.id, row.id));
+  }
+
+  revalidatePath("/map");
 }
 
 /** Re-run the model over a stored email after a failed or poor parse. */

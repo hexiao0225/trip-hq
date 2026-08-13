@@ -1,4 +1,5 @@
 import {
+  doublePrecision,
   index,
   jsonb,
   pgTable,
@@ -44,6 +45,18 @@ export const segments = pgTable(
     fromCity: text("from_city"),
     toCity: text("to_city"),
     address: text("address"),
+
+    /**
+     * Coordinates for the map view, geocoded once and cached here rather than
+     * looked up on every render. A journey has both ends; a stay or a dinner
+     * only has `to`, which is treated as its single location.
+     */
+    fromLat: doublePrecision("from_lat"),
+    fromLng: doublePrecision("from_lng"),
+    toLat: doublePrecision("to_lat"),
+    toLng: doublePrecision("to_lng"),
+    /** Set once geocoding has been attempted, so failures aren't retried forever. */
+    geocodedAt: timestamp("geocoded_at", { withTimezone: true }),
 
     /** Which travelers this applies to, e.g. ["xiao","husband"]. */
     travelers: jsonb("travelers").$type<string[]>().notNull().default([]),
