@@ -248,6 +248,4 @@ a quick way to check the wiring.
 
 ---
 
-> **Note:** the screenshots show real bookings, including confirmation numbers
-> and the dates the house is empty. Fine while this repo is private — regenerate
-> them with sample data before making it public.
+> Screenshots use sample data, not real bookings.

@@ -202,10 +202,14 @@ export const MILESTONES: Milestone[] = [
 ];
 
 /**
- * The sign-in prompt. Only the question lives here — the answer stays in the
- * APP_PASSCODE environment variable so it is never committed to the repo.
+ * The sign-in prompt.
+ *
+ * The answer lives in the APP_PASSCODE environment variable, never here. Keep
+ * the question generic too: this file is public, and a question that names a
+ * specific fact about you narrows the guess space for anyone who finds the
+ * app, however good the answer itself is.
  */
-export const SECURITY_QUESTION = "What is our first dog's name (in number)?";
+export const SECURITY_QUESTION = "What's the passphrase?";
 
 /** Timezones offered in the segment form, in the order they appear. */
 export const TIMEZONE_OPTIONS = [
