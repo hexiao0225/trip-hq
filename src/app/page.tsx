@@ -1,69 +1,204 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+import { Nav } from "@/components/nav";
+import { SegmentCard } from "@/components/segment-card";
+import { SetupNotice } from "@/components/setup-notice";
+import {
+  MILESTONES,
+  PETS_FILTER_ID,
+  TRAVELERS,
+  legById,
+} from "@/lib/config";
+import type { Segment } from "@/lib/db/schema";
+import {
+  filterByTraveler,
+  getPendingCount,
+  getTimelineSegments,
+  groupByDay,
+  nextUpcoming,
+  resolveLeg,
+} from "@/lib/queries";
+import {
+  formatDayHeading,
+  isoDateToDate,
+  relativeDays,
+} from "@/lib/time";
+
+function firstParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function Milestones() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="grid gap-2 sm:grid-cols-2">
+      {MILESTONES.map((milestone) => {
+        const date = isoDateToDate(milestone.date, milestone.timezone);
+        return (
+          <div
+            key={milestone.label}
+            className="rounded-xl border border-edge bg-surface px-4 py-3"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            <p className="text-xs tracking-wide text-muted uppercase">
+              {milestone.label}
+            </p>
+            <p className="mt-1 font-medium">
+              {formatDayHeading(milestone.date)}
+            </p>
+            <p className="text-sm text-muted">
+              {relativeDays(date, milestone.timezone)}
+            </p>
+          </div>
+        );
+      })}
     </div>
+  );
+}
+
+function TravelerFilter({ active }: { active: string | null }) {
+  const options = [
+    { id: null, label: "Everyone" },
+    ...TRAVELERS.map((t) => ({ id: t.id as string | null, label: t.name })),
+    // Both dogs behind one tab — what's happening at home is a single question.
+    { id: PETS_FILTER_ID as string | null, label: "🐕 Pets" },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((option) => {
+        const selected = active === option.id;
+        return (
+          <Link
+            key={option.label}
+            href={option.id ? `/?who=${option.id}` : "/"}
+            className={`inline-flex min-h-10 items-center rounded-full border px-3.5 text-sm transition ${
+              selected
+                ? "border-stone-900 bg-stone-900 text-white"
+                : "border-edge bg-surface text-muted hover:text-foreground"
+            }`}
+          >
+            {option.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+function LegHeading({ legId }: { legId: string }) {
+  const leg = legById(legId);
+  // "Unscheduled / No date set" is noise: the day heading already says the
+  // date is missing, so anything not on a known leg gets no heading at all.
+  if (!leg || leg.id === "unscheduled") return null;
+
+  return (
+    <div className="mt-8 flex flex-wrap items-baseline gap-x-2 first:mt-0">
+      <h2 className="text-sm font-semibold tracking-wide uppercase">
+        {leg.label}
+      </h2>
+      <span className="text-xs text-muted">{leg.place}</span>
+    </div>
+  );
+}
+
+function UpNext({ segment }: { segment: Segment }) {
+  if (!segment.startAt) return null;
+  return (
+    <div className="rounded-xl border border-edge bg-surface px-4 py-3">
+      <p className="text-xs tracking-wide text-muted uppercase">Up next</p>
+      <p className="mt-1 font-medium">{segment.title}</p>
+      <p className="text-sm text-muted">
+        {relativeDays(segment.startAt, segment.startTz)}
+      </p>
+    </div>
+  );
+}
+
+// Trip data is per-request and changes constantly; never prerender it.
+export const dynamic = "force-dynamic";
+
+export default async function TimelinePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const who = firstParam(params.who);
+
+  let all: Segment[];
+  let pendingCount: number;
+  try {
+    [all, pendingCount] = await Promise.all([
+      getTimelineSegments(),
+      getPendingCount(),
+    ]);
+  } catch (error) {
+    return <SetupNotice error={error} />;
+  }
+
+  const visible = filterByTraveler(all, who);
+  const upcoming = nextUpcoming(visible);
+
+  // Work out the leg heading for each day up front: a label is only shown when
+  // the trip actually moves on, so it can't be decided during render.
+  const days = groupByDay(visible).map((day, index, list) => {
+    const legId = day.segments[0] ? resolveLeg(day.segments[0]) : "unscheduled";
+    const previous = list[index - 1];
+    const previousLeg = previous?.segments[0]
+      ? resolveLeg(previous.segments[0])
+      : index === 0
+        ? null
+        : "unscheduled";
+    return { ...day, legId, showLeg: legId !== previousLeg };
+  });
+
+  return (
+    <>
+      <Nav pendingCount={pendingCount} />
+
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
+        <div className="space-y-3">
+          <Milestones />
+          {upcoming && <UpNext segment={upcoming} />}
+        </div>
+
+        <div className="mt-6">
+          <TravelerFilter active={who} />
+        </div>
+
+        {days.length === 0 ? (
+          <div className="mt-10 rounded-xl border border-dashed border-edge px-4 py-10 text-center">
+            <p className="font-medium">Nothing booked yet</p>
+            <p className="mt-1 text-sm text-muted">
+              Add something by hand, or forward a confirmation email to your
+              trip address and it&apos;ll appear in Review.
+            </p>
+            <Link href="/add" className="btn-primary mt-4">
+              Add the first thing
+            </Link>
+          </div>
+        ) : (
+          <div className="mt-6">
+            {days.map((day) => (
+              <section key={day.date}>
+                {day.showLeg && <LegHeading legId={day.legId} />}
+
+                <h3 className="mt-4 mb-2 text-sm font-medium text-muted">
+                  {day.date === "unknown"
+                    ? "No date yet"
+                    : formatDayHeading(day.date)}
+                </h3>
+
+                <div className="space-y-2">
+                  {day.segments.map((segment) => (
+                    <SegmentCard key={segment.id} segment={segment} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </main>
+    </>
   );
 }
