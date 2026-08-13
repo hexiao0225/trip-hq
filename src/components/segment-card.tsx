@@ -33,12 +33,13 @@ function TravelerBadges({ ids }: { ids: string[] }) {
 
 /**
  * "San Francisco (SFO)" — city first, since the code is only meaningful if you
- * already know it. Falls back to whichever half exists.
+ * already know it. Null when there's nothing to show, so a segment with no
+ * route (an activity, a stay) renders no route line at all.
  */
 function endpointLabel(
   city: string | null,
   label: string | null,
-): string {
+): string | null {
   const cityName = city?.trim();
   const code = label?.trim();
   if (cityName && code) {
@@ -47,7 +48,18 @@ function endpointLabel(
       ? code
       : `${cityName} (${code})`;
   }
-  return cityName || code || "?";
+  return cityName || code || null;
+}
+
+/**
+ * The route line. An arrow only makes sense with both ends — a one-sided
+ * booking shows the place it does know rather than pointing at a "?".
+ */
+function routeLabel(segment: Segment): string | null {
+  const from = endpointLabel(segment.fromCity, segment.fromLabel);
+  const to = endpointLabel(segment.toCity, segment.toLabel);
+  if (from && to) return `${from} → ${to}`;
+  return from ?? to;
 }
 
 /**
@@ -128,6 +140,7 @@ export function SegmentCard({ segment }: { segment: Segment }) {
   const meta = kindMeta(segment.kind);
   const cancelled = segment.status === "cancelled";
   const query = mapsQuery(segment);
+  const route = routeLabel(segment);
 
   return (
     /*
@@ -173,12 +186,7 @@ export function SegmentCard({ segment }: { segment: Segment }) {
             {segment.title}
           </h3>
 
-          {(segment.fromLabel || segment.toLabel) && (
-            <p className="mt-0.5 text-sm text-muted">
-              {endpointLabel(segment.fromCity, segment.fromLabel)} →{" "}
-              {endpointLabel(segment.toCity, segment.toLabel)}
-            </p>
-          )}
+          {route && <p className="mt-0.5 text-sm text-muted">{route}</p>}
 
           {segment.address && (
             <p className="mt-0.5 text-sm text-muted">{segment.address}</p>

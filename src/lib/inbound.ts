@@ -64,7 +64,7 @@ function headerValue(headers: Payload | undefined, key: string): string | null {
   return firstString(raw);
 }
 
-export function normalizeJsonPayload(payload: Payload): NormalizedEmail {
+function normalizeJsonPayload(payload: Payload): NormalizedEmail {
   // CloudMailin: envelope + headers + plain/html.
   if ("envelope" in payload && "headers" in payload) {
     const envelope = payload.envelope as Payload | undefined;
@@ -126,7 +126,7 @@ export function normalizeJsonPayload(payload: Payload): NormalizedEmail {
 }
 
 /** SendGrid Inbound Parse posts multipart/form-data rather than JSON. */
-export function normalizeFormPayload(form: FormData): NormalizedEmail {
+function normalizeFormPayload(form: FormData): NormalizedEmail {
   const get = (key: string): string | null => {
     const value = form.get(key);
     return typeof value === "string" && value.trim() ? value.trim() : null;

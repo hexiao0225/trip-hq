@@ -5,7 +5,7 @@ import { DateTime } from "luxon";
  * timezone that segment actually happens in rather than the viewer's local one.
  */
 
-export function inZone(date: Date, timezone: string): DateTime {
+function inZone(date: Date, timezone: string): DateTime {
   return DateTime.fromJSDate(date).setZone(timezone || "UTC");
 }
 
@@ -15,7 +15,7 @@ export function formatDate(date: Date, timezone: string): string {
 }
 
 /** "14:35" */
-export function formatTime(date: Date, timezone: string): string {
+function formatTime(date: Date, timezone: string): string {
   return inZone(date, timezone).toFormat("HH:mm");
 }
 
@@ -28,7 +28,7 @@ export function formatTime(date: Date, timezone: string): string {
  * London; en-GB gives "BST" but "GMT-7" for Los Angeles), and an offset tells
  * you nothing about where the time is local to.
  */
-export function zoneCity(timezone: string): string {
+function zoneCity(timezone: string): string {
   const tail = (timezone || "").split("/").pop() ?? "";
   return tail.replace(/_/g, " ") || timezone;
 }
@@ -77,7 +77,7 @@ export function dateToLocalInput(
 }
 
 /** Whole days from now until `date`. Negative once it's in the past. */
-export function daysUntil(date: Date, timezone: string): number {
+function daysUntil(date: Date, timezone: string): number {
   const target = inZone(date, timezone).startOf("day");
   const today = DateTime.now().setZone(timezone || "UTC").startOf("day");
   return Math.round(target.diff(today, "days").days);

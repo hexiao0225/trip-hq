@@ -93,7 +93,7 @@ export async function verifySessionToken(
 }
 
 /** Length-independent comparison so a wrong passcode leaks no timing signal. */
-export function safeEqual(a: string, b: string): boolean {
+function safeEqual(a: string, b: string): boolean {
   const aBytes = encoder.encode(a);
   const bBytes = encoder.encode(b);
   // Compare a fixed-size digest-ish window; differing lengths still fail.

@@ -54,10 +54,10 @@ export const PETS: Companion[] = [
   },
 ];
 
-export const EVERYONE: Companion[] = [...TRAVELERS, ...PETS];
+const EVERYONE: Companion[] = [...TRAVELERS, ...PETS];
+const PET_IDS: string[] = PETS.map((p) => p.id);
 
-export const TRAVELER_IDS: string[] = TRAVELERS.map((t) => t.id);
-export const PET_IDS: string[] = PETS.map((p) => p.id);
+/** Every id a segment may be assigned to, for validating form input. */
 export const EVERYONE_IDS: string[] = EVERYONE.map((c) => c.id);
 
 export function companionById(id: string): Companion | undefined {

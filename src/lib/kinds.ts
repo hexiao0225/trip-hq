@@ -1,4 +1,4 @@
-export type SegmentKind =
+type SegmentKind =
   | "flight"
   | "train"
   | "hotel"
@@ -120,4 +120,3 @@ export function kindMeta(kind: string): KindMeta {
 export const KIND_IDS: string[] = KINDS.map((k) => k.id);
 
 export const SEGMENT_STATUSES = ["confirmed", "pending", "cancelled"] as const;
-export type SegmentStatus = (typeof SEGMENT_STATUSES)[number];
