@@ -5,6 +5,7 @@ type SegmentKind =
   | "car"
   | "ferry"
   | "activity"
+  | "dining"
   | "pet"
   | "note";
 
@@ -83,11 +84,23 @@ export const KINDS: KindMeta[] = [
     id: "activity",
     label: "Activity",
     icon: "📍",
-    ranged: true,
+    // Not ranged: a show or a tour runs within a day, so the end time and
+    // duration read better than the night count a stay wants.
+    ranged: false,
     fromLabel: null,
     toLabel: null,
     chipClass: "bg-pink-100 text-pink-900",
     tintClass: "border-pink-200 bg-pink-50",
+  },
+  {
+    id: "dining",
+    label: "Dining",
+    icon: "🍽️",
+    ranged: false,
+    fromLabel: null,
+    toLabel: null,
+    chipClass: "bg-orange-100 text-orange-900",
+    tintClass: "border-orange-200 bg-orange-50",
   },
   {
     id: "pet",

@@ -87,6 +87,28 @@ function mapsUrl(query: string): string {
 }
 
 /**
+ * The location line, doubling as the map link. The pin marks it as tappable
+ * without spending a whole row on a labelled button.
+ */
+function MapLink({ query, label }: { query: string | null; label: string }) {
+  if (!query) return <p className="mt-0.5 text-sm text-muted">{label}</p>;
+  return (
+    <p className="mt-0.5 text-sm">
+      <a
+        href={mapsUrl(query)}
+        target="_blank"
+        rel="noreferrer"
+        title="Open in Google Maps"
+        className="inline-flex items-start gap-1 py-0.5 text-muted underline-offset-2 transition hover:text-foreground hover:underline"
+      >
+        <span aria-hidden>📍</span>
+        <span>{label}</span>
+      </a>
+    </p>
+  );
+}
+
+/**
  * Describes when the segment happens, in words that suit its kind: a duration
  * for flights, a night count for stays, a plain time for everything else.
  */
@@ -142,24 +164,18 @@ export function SegmentCard({ segment }: { segment: Segment }) {
   const query = mapsQuery(segment);
   const route = routeLabel(segment);
 
+  // The location line is the map link, so no separate button is needed. A
+  // street address is the better target when there is one; a flight has none,
+  // so its route doubles as the link.
+  const linkedAddress = segment.address?.trim() ?? null;
+  const linkedRoute = !linkedAddress && query ? route : null;
+
   return (
-    /*
-     * The whole card opens the detail view, but the map link has to stay a
-     * separate destination — and an anchor can't be nested inside another. So
-     * the card is a plain container with a stretched link behind it, and the
-     * map button lifted above on its own layer.
-     */
     <div
-      className={`relative rounded-xl border p-4 transition hover:shadow-sm ${meta.tintClass} ${
+      className={`rounded-xl border p-4 transition hover:shadow-sm ${meta.tintClass} ${
         cancelled ? "opacity-55" : ""
       }`}
     >
-      <Link
-        href={`/segment/${segment.id}`}
-        aria-label={`Open ${segment.title}`}
-        className="absolute inset-0 rounded-xl"
-      />
-
       <div className="flex items-start gap-3">
         <span aria-hidden className="mt-0.5 text-lg leading-none">
           {meta.icon}
@@ -180,17 +196,29 @@ export function SegmentCard({ segment }: { segment: Segment }) {
             <TravelerBadges ids={segment.travelers} />
           </div>
 
-          <h3
-            className={`mt-1.5 font-medium ${cancelled ? "line-through" : ""}`}
-          >
-            {segment.title}
+          <h3 className={`mt-1.5 ${cancelled ? "line-through" : ""}`}>
+            <Link
+              href={`/segment/${segment.id}`}
+              className="font-medium underline-offset-2 hover:underline"
+            >
+              {segment.title}
+            </Link>
           </h3>
 
-          {route && <p className="mt-0.5 text-sm text-muted">{route}</p>}
-
-          {segment.address && (
-            <p className="mt-0.5 text-sm text-muted">{segment.address}</p>
+          {/*
+            A street address supersedes the route line — otherwise a dinner
+            reservation reads "London" and then the address that also says
+            London, on the line below.
+          */}
+          {route && !linkedAddress && (
+            linkedRoute ? (
+              <MapLink query={query} label={route} />
+            ) : (
+              <p className="mt-0.5 text-sm text-muted">{route}</p>
+            )
           )}
+
+          {linkedAddress && <MapLink query={query} label={linkedAddress} />}
 
           <p className="mt-1.5 font-mono text-xs text-foreground/80">
             <Timing segment={segment} />
@@ -204,19 +232,6 @@ export function SegmentCard({ segment }: { segment: Segment }) {
                 <span className="font-mono">{segment.confirmation}</span>
               )}
             </p>
-          )}
-
-          {query && (
-            <a
-              href={mapsUrl(query)}
-              target="_blank"
-              rel="noreferrer"
-              // Sits above the stretched link so it stays its own tap target,
-              // and is padded to a comfortable thumb size on a phone.
-              className="relative z-10 -ml-1 mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted transition hover:bg-stone-100 hover:text-foreground"
-            >
-              <span aria-hidden>📍</span> Open in Maps
-            </a>
           )}
         </div>
       </div>

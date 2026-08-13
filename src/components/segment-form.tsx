@@ -242,6 +242,7 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
 
         {(meta.id === "hotel" ||
           meta.id === "activity" ||
+          meta.id === "dining" ||
           meta.id === "pet") && (
           <div>
             <label className="label" htmlFor="address">

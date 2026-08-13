@@ -25,12 +25,16 @@ const ParsedSegmentSchema = z.object({
       "car",
       "ferry",
       "activity",
+      "dining",
       "pet",
       "note",
     ])
     .describe(
-      "The type of booking this segment represents. Use 'pet' for dog " +
-        "boarding, sitting, daycare, or a vet appointment.",
+      "The type of booking this segment represents. Use 'dining' for a table " +
+        "at a restaurant, bar, or cafe, including afternoon tea. Use " +
+        "'activity' for anything else you attend — a show, tour, museum " +
+        "ticket, or class. Use 'pet' for dog boarding, sitting, daycare, or a " +
+        "vet appointment.",
     ),
   title: z
     .string()
