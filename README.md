@@ -9,7 +9,14 @@ into the itinerary. Everything is shown in the local time of the place it
 happens, which matters when a single day spans Pacific, British and Eastern time.
 
 <p align="center">
-  <img src="docs/screenshots/timeline-mobile.png" width="330" alt="The timeline on a phone: countdown cards, per-person filters, and colour-tinted bookings." />
+  <img src="docs/screenshots/demo.gif" width="330" alt="Walkthrough: the timeline grouped by day and leg, a booking's full detail, and the review queue where forwarded email lands." />
+</p>
+
+<p align="center">
+  <sub>
+    <a href="docs/screenshots/demo.mp4">Full-resolution video</a> · real bookings,
+    with names and confirmation numbers masked
+  </sub>
 </p>
 
 ---
@@ -248,4 +255,7 @@ a quick way to check the wiring.
 
 ---
 
-> Screenshots use sample data, not real bookings.
+> The still screenshots use invented sample data. The walkthrough at the top
+> shows a real trip, with one traveler's name shortened and every confirmation
+> number removed — from the cards, the detail rows and the email subjects that
+> quoted them.
