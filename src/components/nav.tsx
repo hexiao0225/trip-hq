@@ -20,6 +20,10 @@ export function Nav({ pendingCount }: { pendingCount: number }) {
 
         <Link
           href="/map"
+          // The map route pulls Leaflet and then map tiles. Not prefetching it
+          // keeps that off the wire until the tab is actually opened, which
+          // matters on roaming data.
+          prefetch={false}
           className="flex min-h-11 items-center rounded-lg px-2.5 text-sm text-muted transition hover:bg-stone-100 hover:text-foreground"
         >
           Map

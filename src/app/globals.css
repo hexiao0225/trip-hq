@@ -23,7 +23,13 @@
   --color-edge: var(--border);
   --color-muted: var(--muted);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /*
+   * The monospace face is used only for times and reference numbers, and a
+   * webfont for that costs a ~22KB download on a phone that may be roaming.
+   * The system stack is already installed and looks near-identical here.
+   */
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 body {
