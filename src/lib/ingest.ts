@@ -6,12 +6,15 @@ import { getDb } from "@/lib/db";
 import {
   inboundEmails,
   segments,
+  type Leg,
   type NewSegment,
   type Segment,
+  type Trip,
 } from "@/lib/db/schema";
 import type { NormalizedEmail } from "@/lib/inbound";
 import { parseBookingEmail, type ParsedSegment } from "@/lib/parse-email";
-import { localInputToDate } from "@/lib/time";
+import { dayKey, localInputToDate } from "@/lib/time";
+import { getLegs, getTrips, legForDate, tripForDate } from "@/lib/trips";
 
 /**
  * Store the raw email first, then parse. Persisting before the model call means
@@ -52,6 +55,8 @@ export async function storeEmail(
 function toSegmentRow(
   parsed: ParsedSegment,
   emailId: string,
+  trip: Trip | null,
+  legs: Leg[],
 ): NewSegment | null {
   const startTz = parsed.startTz || "UTC";
   const endTz = parsed.endTz || startTz;
@@ -67,7 +72,13 @@ function toSegmentRow(
     if (item.label && item.value) details[item.label] = item.value;
   }
 
+  // File it under a leg when its date lands inside one, so a booking arrives
+  // already grouped under "Scotland" rather than needing to be sorted by hand.
+  const leg = startAt ? legForDate(legs, dayKey(startAt, startTz)) : undefined;
+
   return {
+    tripId: trip?.id ?? null,
+    legId: leg?.id ?? null,
     kind: parsed.kind,
     title: parsed.title,
     vendor: parsed.vendor,
@@ -81,8 +92,11 @@ function toSegmentRow(
     fromCity: parsed.fromCity,
     toCity: parsed.toCity,
     address: parsed.address,
-    travelers: parsed.travelers.length ? parsed.travelers : ["xiao", "hanyang"],
-    leg: null,
+    // Fall back to everyone on the trip, which is not always both people —
+    // one of them may be going alone.
+    travelers: parsed.travelers.length
+      ? parsed.travelers
+      : (trip?.travelers ?? []),
     // Everything from email lands in the review queue rather than the timeline.
     status: "pending",
     costAmount: parsed.costAmount,
@@ -105,13 +119,17 @@ function toSegmentRow(
  */
 async function findDuplicate(row: NewSegment): Promise<Segment | undefined> {
   const reference = row.confirmation?.trim();
-  if (!reference || !row.startAt) return undefined;
+  if (!reference || !row.startAt || !row.tripId) return undefined;
 
   const matches = await getDb()
     .select()
     .from(segments)
     .where(
       and(
+        // Scoped to the trip: two trips can carry the same reference if a
+        // provider recycles them, and merging across trips would be worse
+        // than a duplicate.
+        eq(segments.tripId, row.tripId),
         sql`lower(trim(${segments.confirmation})) = ${reference.toLowerCase()}`,
         eq(segments.startAt, row.startAt),
       ),
@@ -168,11 +186,20 @@ export async function processEmail(emailId: string): Promise<number> {
   const email = rows[0];
   if (!email) throw new Error(`No stored email with id ${emailId}`);
 
+  const allTrips = await getTrips();
+
   try {
     const { extraction, truncated } = await parseBookingEmail({
       subject: email.subject,
       fromAddress: email.fromAddress,
       body: email.body,
+      trips: allTrips.map((trip) => ({
+        slug: trip.slug,
+        name: trip.name,
+        destination: trip.destination,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+      })),
     });
 
     if (!extraction.isBooking || extraction.segments.length === 0) {
@@ -187,8 +214,23 @@ export async function processEmail(emailId: string): Promise<number> {
       return 0;
     }
 
+    // Which trip this email is about: the model's pick if it names a real
+    // one, otherwise whichever trip the first dated booking falls inside.
+    // Neither is a guess worth forcing — an unmatched email lands in Review
+    // asking which trip it belongs to.
+    const named = extraction.tripSlug
+      ? (allTrips.find((t) => t.slug === extraction.tripSlug) ?? null)
+      : null;
+
+    const firstDate = extraction.segments
+      .map((parsed) => parsed.startLocal?.slice(0, 10))
+      .find((date): date is string => Boolean(date));
+
+    const trip = named ?? tripForDate(allTrips, firstDate) ?? null;
+    const tripLegs = trip ? await getLegs(trip.id) : [];
+
     const newRows = extraction.segments
-      .map((parsed) => toSegmentRow(parsed, emailId))
+      .map((parsed) => toSegmentRow(parsed, emailId, trip, tripLegs))
       .filter((row): row is NewSegment => row !== null);
 
     // Clear anything a previous run of this email produced, so a re-parse
@@ -220,6 +262,11 @@ export async function processEmail(emailId: string): Promise<number> {
     if (truncated) {
       notes.push("Email was long and only the first part was read.");
     }
+    if (!trip && newRows.length > 0) {
+      notes.push(
+        "Couldn't tell which trip this belongs to — pick one in Review.",
+      );
+    }
     if (merged > 0) {
       notes.push(
         `${merged} booking${merged === 1 ? "" : "s"} already on the trip; ` +
@@ -230,6 +277,7 @@ export async function processEmail(emailId: string): Promise<number> {
     await getDb()
       .update(inboundEmails)
       .set({
+        tripId: trip?.id ?? null,
         parseStatus: "parsed",
         parseError: notes.length > 0 ? notes.join(" ") : null,
         segmentCount: String(created),

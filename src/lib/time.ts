@@ -1,8 +1,9 @@
 import { DateTime } from "luxon";
 
 /**
- * The trip crosses BST, CST and PDT, so every displayed time is rendered in the
- * timezone that segment actually happens in rather than the viewer's local one.
+ * A trip can cross BST, CST, SGT and PDT in one day, so every displayed time is
+ * rendered in the timezone that segment actually happens in rather than the
+ * viewer's local one.
  */
 
 function inZone(date: Date, timezone: string): DateTime {
@@ -113,6 +114,41 @@ export function formatDuration(start: Date, end: Date): string {
   if (hours === 0) return `${mins}m`;
   if (mins === 0) return `${hours}h`;
   return `${hours}h ${mins}m`;
+}
+
+/**
+ * Today's date in a given zone, as YYYY-MM-DD.
+ *
+ * Trip and leg bounds are plain dates, so comparing them against "now" has to
+ * happen in the trip's own zone — a trip that starts tomorrow in Singapore is
+ * already under way from San Mateo.
+ */
+export function todayIn(timezone: string): string {
+  return (
+    DateTime.now().setZone(timezone || "UTC").toISODate() ??
+    DateTime.now().toISODate()!
+  );
+}
+
+/** "15 Sep – 2 Oct 2026", or a single date when the trip is one day long. */
+export function formatDateRange(
+  start: string | null,
+  end: string | null,
+): string {
+  const from = start ? DateTime.fromISO(start) : null;
+  const to = end ? DateTime.fromISO(end) : null;
+
+  if (from?.isValid && to?.isValid) {
+    if (from.hasSame(to, "day")) return from.toFormat("d LLL yyyy");
+    const sameYear = from.year === to.year;
+    const left = sameYear
+      ? from.toFormat(from.month === to.month ? "d" : "d LLL")
+      : from.toFormat("d LLL yyyy");
+    return `${left} – ${to.toFormat("d LLL yyyy")}`;
+  }
+  if (from?.isValid) return `From ${from.toFormat("d LLL yyyy")}`;
+  if (to?.isValid) return `Until ${to.toFormat("d LLL yyyy")}`;
+  return "Dates not set";
 }
 
 /** Interpret a plain YYYY-MM-DD as noon in `timezone`, avoiding DST edges. */

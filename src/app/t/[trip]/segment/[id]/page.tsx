@@ -4,13 +4,16 @@ import { Nav } from "@/components/nav";
 import { SegmentForm, type SegmentFormValues } from "@/components/segment-form";
 import { SetupNotice } from "@/components/setup-notice";
 import type { Segment } from "@/lib/db/schema";
-import { getPendingCount, getSegment } from "@/lib/queries";
+import { getNavData } from "@/lib/nav";
+import { getSegment } from "@/lib/queries";
 import { dateToLocalInput } from "@/lib/time";
+import { getTripContext, toFormTrip, type TripContext } from "@/lib/trips";
 
 /** Flatten a stored row into the plain strings the client form works with. */
 function toFormValues(segment: Segment): SegmentFormValues {
   return {
     id: segment.id,
+    legId: segment.legId ?? "",
     kind: segment.kind,
     title: segment.title,
     vendor: segment.vendor ?? "",
@@ -25,7 +28,6 @@ function toFormValues(segment: Segment): SegmentFormValues {
     toCity: segment.toCity ?? "",
     address: segment.address ?? "",
     travelers: segment.travelers,
-    leg: segment.leg ?? "",
     status: segment.status,
     costAmount: segment.costAmount ?? "",
     costCurrency: segment.costCurrency ?? "",
@@ -40,28 +42,41 @@ export const dynamic = "force-dynamic";
 export default async function EditSegmentPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ trip: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { trip: slug, id } = await params;
 
-  let segment: Segment | undefined;
-  let pendingCount = 0;
+  let loaded: {
+    context: TripContext | null;
+    segment: Segment | undefined;
+    nav: Awaited<ReturnType<typeof getNavData>>;
+  };
   try {
-    [segment, pendingCount] = await Promise.all([
+    const [context, segment, nav] = await Promise.all([
+      getTripContext(slug),
       getSegment(id),
-      getPendingCount(),
+      getNavData(slug),
     ]);
+    loaded = { context, segment, nav };
   } catch (error) {
     return <SetupNotice error={error} />;
   }
 
-  if (!segment) notFound();
+  const { context, segment, nav } = loaded;
+  if (!context || !segment) notFound();
 
+  // A booking reached through the wrong trip's URL would save itself onto that
+  // trip, since the form posts the trip it was rendered with. The one case
+  // that is legitimate is a booking not yet filed anywhere, which Review opens
+  // from whichever trip you happened to be on.
+  if (segment.tripId !== null && segment.tripId !== context.trip.id) notFound();
+
+  const formTrip = toFormTrip(context);
   const details = Object.entries(segment.details);
 
   return (
     <>
-      <Nav pendingCount={pendingCount} />
+      <Nav trip={nav.current} trips={nav.trips} pendingCount={nav.pendingCount} />
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
         <h1 className="mb-1 text-xl font-semibold tracking-tight">
           {segment.title}
@@ -70,6 +85,7 @@ export default async function EditSegmentPage({
           {segment.source === "email"
             ? "Added from a forwarded email"
             : "Added by hand"}
+          {segment.tripId === null && " · not filed to a trip yet"}
         </p>
 
         {details.length > 0 && (
@@ -83,7 +99,7 @@ export default async function EditSegmentPage({
           </dl>
         )}
 
-        <SegmentForm initial={toFormValues(segment)} />
+        <SegmentForm initial={toFormValues(segment)} trip={formTrip} />
       </main>
     </>
   );

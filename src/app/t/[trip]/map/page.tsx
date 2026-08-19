@@ -1,12 +1,16 @@
+import { notFound } from "next/navigation";
+
 import { locateSegments } from "@/app/actions";
 import { MapCanvas } from "@/components/map-canvas";
 import type { MapPlace } from "@/components/map-view";
 import { Nav } from "@/components/nav";
 import { SetupNotice } from "@/components/setup-notice";
-import type { Segment } from "@/lib/db/schema";
+import type { Segment, Trip } from "@/lib/db/schema";
 import { kindMeta } from "@/lib/kinds";
-import { getPendingCount, getTimelineSegments } from "@/lib/queries";
+import { getNavData } from "@/lib/nav";
+import { getTimelineSegments } from "@/lib/queries";
 import { formatDate, formatTimeWithZone } from "@/lib/time";
+import { getTripBySlug } from "@/lib/trips";
 
 /** Where a booking sits on the map, and what to say about it in the popup. */
 function toPlace(segment: Segment): MapPlace | null {
@@ -44,17 +48,31 @@ function toPlace(segment: Segment): MapPlace | null {
 // Trip data is per-request and changes constantly; never prerender it.
 export const dynamic = "force-dynamic";
 
-export default async function MapPage() {
-  let all: Segment[];
-  let pendingCount = 0;
+export default async function MapPage({
+  params,
+}: {
+  params: Promise<{ trip: string }>;
+}) {
+  const { trip: slug } = await params;
+
+  let loaded: {
+    trip: Trip | undefined;
+    all: Segment[];
+    nav: Awaited<ReturnType<typeof getNavData>>;
+  };
   try {
-    [all, pendingCount] = await Promise.all([
-      getTimelineSegments(),
-      getPendingCount(),
+    const trip = await getTripBySlug(slug);
+    const [all, nav] = await Promise.all([
+      trip ? getTimelineSegments(trip.id) : Promise.resolve([]),
+      getNavData(slug),
     ]);
+    loaded = { trip, all, nav };
   } catch (error) {
     return <SetupNotice error={error} />;
   }
+
+  const { trip, all, nav } = loaded;
+  if (!trip) notFound();
 
   const places = all
     .map(toPlace)
@@ -65,7 +83,7 @@ export default async function MapPage() {
 
   return (
     <>
-      <Nav pendingCount={pendingCount} />
+      <Nav trip={nav.current} trips={nav.trips} pendingCount={nav.pendingCount} />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
@@ -73,13 +91,15 @@ export default async function MapPage() {
             <h1 className="text-xl font-semibold tracking-tight">Map</h1>
             <p className="mt-1 text-sm text-muted">
               {places.length > 0
-                ? "Every booking we can place, with journeys drawn between their ends."
-                : "Nothing has been placed on the map yet."}
+                ? "Every booking on this trip we can place, with journeys drawn between their ends."
+                : "Nothing on this trip has been placed on the map yet."}
             </p>
           </div>
 
           {unlocated > 0 && (
             <form action={locateSegments}>
+              <input type="hidden" name="tripId" value={trip.id} />
+              <input type="hidden" name="tripSlug" value={trip.slug} />
               <button type="submit" className="btn-secondary min-h-10 text-xs">
                 Locate {unlocated} more
               </button>
@@ -91,8 +111,15 @@ export default async function MapPage() {
           <MapCanvas places={places} />
         ) : (
           <div className="rounded-xl border border-dashed border-edge px-4 py-10 text-center text-sm text-muted">
-            Press <strong>Locate</strong> above to look up coordinates for your
-            bookings. It takes about a second each, so it runs in batches.
+            {all.length === 0 ? (
+              <>Nothing is booked on this trip yet.</>
+            ) : (
+              <>
+                Press <strong>Locate</strong> above to look up coordinates for
+                your bookings. It takes about a second each, so it runs in
+                batches.
+              </>
+            )}
           </div>
         )}
 

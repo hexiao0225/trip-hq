@@ -138,6 +138,16 @@ const ExtractionSchema = z.object({
   summary: z
     .string()
     .describe("One sentence describing what this email contained."),
+  tripSlug: z
+    .string()
+    .nullable()
+    .describe(
+      "The slug of the trip these bookings belong to, chosen from the trips " +
+        "listed in the system prompt — matched on dates first, then on " +
+        "destination. Null if none of them fits or the email is ambiguous; a " +
+        "wrong guess is worse than none, because unmatched bookings are filed " +
+        "by hand rather than lost.",
+    ),
   segments: z
     .array(ParsedSegmentSchema)
     .describe(
@@ -158,7 +168,38 @@ const travelerRoster = TRAVELERS.map(
 
 const petRoster = PETS.map((p) => `- id "${p.id}" — ${p.name}`).join("\n");
 
-const SYSTEM_PROMPT = `You extract travel bookings from forwarded confirmation emails for a two-person trip planner.
+/** The trips a forwarded booking could belong to, as the model sees them. */
+export interface TripOption {
+  slug: string;
+  name: string;
+  destination: string | null;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+function tripRoster(trips: TripOption[]): string {
+  if (trips.length === 0) {
+    return "No trips exist yet, so always return null for tripSlug.";
+  }
+  return trips
+    .map((trip) => {
+      const dates =
+        trip.startDate && trip.endDate
+          ? `${trip.startDate} to ${trip.endDate}`
+          : (trip.startDate ?? trip.endDate ?? "dates not set");
+      const where = trip.destination ? ` — ${trip.destination}` : "";
+      return `- slug "${trip.slug}" — ${trip.name}${where} (${dates})`;
+    })
+    .join("\n");
+}
+
+/**
+ * Built per request rather than once at module load, because the trips are
+ * rows now. The roster changes only when a trip is added, so the cached prefix
+ * still holds across the long runs of emails forwarded for one trip.
+ */
+function systemPrompt(trips: TripOption[]): string {
+  return `You extract travel bookings from forwarded confirmation emails for a household trip planner.
 
 The travelers are:
 ${travelerRoster}
@@ -166,13 +207,18 @@ ${travelerRoster}
 They also have two dogs, who stay behind and have their own boarding and vet arrangements:
 ${petRoster}
 
+The trips currently being planned are:
+${tripRoster(trips)}
+
 Guidelines:
 - Produce one segment per distinct bookable item. A round trip is two flights; a multi-city hotel booking with two properties is two stays.
 - Valid segment kinds are: ${KIND_IDS.join(", ")}.
 - Report times exactly as the email states them, as local wall-clock values, and name the IANA timezone separately. Do not convert between zones yourself.
 - When a flight crosses timezones, startTz is the departure airport's zone and endTz is the arrival airport's zone.
+- Decide which trip the email belongs to and return its slug. Dates are the strongest signal, destination the next; a dog's boarding booking belongs to whichever trip it covers the household for. Return null rather than guessing.
 - Leave a field null when the email does not state it. Do not guess a confirmation number, price, or address.
 - If the email is not a travel booking, set isBooking to false and return an empty segments array.`;
+}
 
 function stripHtml(input: string): string {
   return input
@@ -198,6 +244,8 @@ export interface ParseInput {
   body: string;
   /** Raw HTML part, used when the text part is missing or empty. */
   html?: string | null;
+  /** Trips the booking could be filed under. */
+  trips: TripOption[];
 }
 
 export interface ParseResult {
@@ -247,7 +295,7 @@ export async function parseBookingEmail(
       effort: "medium",
       format: zodOutputFormat(ExtractionSchema),
     },
-    system: SYSTEM_PROMPT,
+    system: systemPrompt(input.trips),
     messages: [{ role: "user", content: userContent }],
   });
 

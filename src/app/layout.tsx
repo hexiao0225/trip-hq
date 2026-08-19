@@ -7,7 +7,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Trip HQ",
-  description: "London, Scotland, the residency, and the way home.",
+  description: "Every trip, its bookings, and the way home.",
 };
 
 /**

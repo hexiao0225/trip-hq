@@ -1,10 +1,15 @@
 import "server-only";
 
-import { asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne, or } from "drizzle-orm";
 
-import { LEGS, PETS_FILTER_ID, isPet, type LegId } from "@/lib/config";
+import { PETS_FILTER_ID, isPet } from "@/lib/config";
 import { getDb } from "@/lib/db";
-import { inboundEmails, segments, type Segment } from "@/lib/db/schema";
+import {
+  inboundEmails,
+  segments,
+  type Leg,
+  type Segment,
+} from "@/lib/db/schema";
 import { dayKey } from "@/lib/time";
 
 export interface DayGroup {
@@ -13,21 +18,30 @@ export interface DayGroup {
   segments: Segment[];
 }
 
-/** All segments that belong on the timeline, earliest first. Nulls last. */
-export async function getTimelineSegments(): Promise<Segment[]> {
+/** One trip's timeline, earliest first. Nulls last. */
+export async function getTimelineSegments(tripId: string): Promise<Segment[]> {
   return getDb()
     .select()
     .from(segments)
-    .where(ne(segments.status, "pending"))
+    .where(and(eq(segments.tripId, tripId), ne(segments.status, "pending")))
     .orderBy(asc(segments.startAt), asc(segments.createdAt));
 }
 
-/** Segments parsed from email that still need a human to confirm them. */
-export async function getPendingSegments(): Promise<Segment[]> {
+/**
+ * Segments parsed from email that still need a human to confirm them, for one
+ * trip — plus anything that hasn't been filed to a trip at all, which has to
+ * surface somewhere or it would sit in the database unseen.
+ */
+export async function getPendingSegments(tripId: string): Promise<Segment[]> {
   return getDb()
     .select()
     .from(segments)
-    .where(eq(segments.status, "pending"))
+    .where(
+      and(
+        eq(segments.status, "pending"),
+        or(eq(segments.tripId, tripId), isNull(segments.tripId)),
+      ),
+    )
     .orderBy(desc(segments.createdAt));
 }
 
@@ -40,20 +54,18 @@ export async function getSegment(id: string): Promise<Segment | undefined> {
   return rows[0];
 }
 
-export async function getRecentEmails(limit = 25) {
+/**
+ * Recent forwarded email. Scoped to the trip its bookings were filed under,
+ * with unrouted mail included — that's usually exactly what you're looking for
+ * when something didn't arrive where you expected.
+ */
+export async function getRecentEmails(tripId: string, limit = 25) {
   return getDb()
     .select()
     .from(inboundEmails)
+    .where(or(eq(inboundEmails.tripId, tripId), isNull(inboundEmails.tripId)))
     .orderBy(desc(inboundEmails.receivedAt))
     .limit(limit);
-}
-
-export async function getPendingCount(): Promise<number> {
-  const rows = await getDb()
-    .select({ id: segments.id })
-    .from(segments)
-    .where(eq(segments.status, "pending"));
-  return rows.length;
 }
 
 /**
@@ -81,23 +93,30 @@ export function groupByDay(rows: Segment[]): DayGroup[] {
 }
 
 /**
- * Which leg a segment belongs to. An explicit `leg` always wins; otherwise fall
- * back to matching the date against the ranges in config.
+ * Which leg a segment belongs to. An explicit `legId` always wins; otherwise
+ * fall back to matching the date against each leg's range.
+ *
+ * Returns null for anything that lands outside every leg, which the timeline
+ * renders without a heading rather than under an "Unscheduled" one — the day
+ * heading already says the date is missing.
  */
-export function resolveLeg(row: Segment): LegId {
-  if (row.leg && LEGS.some((l) => l.id === row.leg)) {
-    return row.leg as LegId;
+export function resolveLeg(row: Segment, legs: Leg[]): Leg | null {
+  if (row.legId) {
+    const explicit = legs.find((leg) => leg.id === row.legId);
+    if (explicit) return explicit;
   }
-  if (!row.startAt) return "unscheduled";
+  if (!row.startAt) return null;
 
   const iso = dayKey(row.startAt, row.startTz);
-  for (const leg of LEGS) {
-    if (leg.id === "unscheduled") continue;
-    const afterStart = !leg.start || iso >= leg.start;
-    const beforeEnd = !leg.end || iso <= leg.end;
-    if (leg.start && leg.end && afterStart && beforeEnd) return leg.id;
-  }
-  return "unscheduled";
+  return (
+    legs.find(
+      (leg) =>
+        leg.startDate &&
+        leg.endDate &&
+        iso >= leg.startDate &&
+        iso <= leg.endDate,
+    ) ?? null
+  );
 }
 
 /** Restrict a list to segments involving a given traveler, or either dog. */

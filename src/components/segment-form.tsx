@@ -5,16 +5,22 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { deleteSegment, saveSegment, type FormState } from "@/app/actions";
-import {
-  PETS,
-  SELECTABLE_LEGS,
-  TIMEZONE_OPTIONS,
-  TRAVELERS,
-} from "@/lib/config";
+import { PETS, TRAVELERS, timezoneOptions } from "@/lib/config";
 import { KINDS, SEGMENT_STATUSES, kindMeta } from "@/lib/kinds";
+
+/** The trip a booking is being added to, and the legs it can be filed under. */
+export interface SegmentFormTrip {
+  id: string;
+  slug: string;
+  timezone: string;
+  currency: string | null;
+  travelers: string[];
+  legs: { id: string; label: string; timezone: string }[];
+}
 
 export interface SegmentFormValues {
   id: string;
+  legId: string;
   kind: string;
   title: string;
   vendor: string;
@@ -29,7 +35,6 @@ export interface SegmentFormValues {
   toCity: string;
   address: string;
   travelers: string[];
-  leg: string;
   status: string;
   costAmount: string;
   costCurrency: string;
@@ -37,29 +42,39 @@ export interface SegmentFormValues {
   link: string;
 }
 
-export const EMPTY_SEGMENT: SegmentFormValues = {
-  id: "",
-  kind: "flight",
-  title: "",
-  vendor: "",
-  confirmation: "",
-  startLocal: "",
-  startTz: "Europe/London",
-  endLocal: "",
-  endTz: "",
-  fromLabel: "",
-  toLabel: "",
-  fromCity: "",
-  toCity: "",
-  address: "",
-  travelers: TRAVELERS.map((t) => t.id),
-  leg: "",
-  status: "confirmed",
-  costAmount: "",
-  costCurrency: "GBP",
-  notes: "",
-  link: "",
-};
+/**
+ * A blank booking, pre-filled from the trip it's being added to — its zone,
+ * its currency, and whoever is going. Nearly every field on a Singapore
+ * booking differs from a London one, and none of it should be typed twice.
+ *
+ * Not exported: this module is a client component, so a server page calling
+ * it directly fails at render. The Add page leaves `initial` off instead.
+ */
+function emptySegment(trip: SegmentFormTrip): SegmentFormValues {
+  return {
+    id: "",
+    legId: "",
+    kind: "flight",
+    title: "",
+    vendor: "",
+    confirmation: "",
+    startLocal: "",
+    startTz: trip.timezone,
+    endLocal: "",
+    endTz: "",
+    fromLabel: "",
+    toLabel: "",
+    fromCity: "",
+    toCity: "",
+    address: "",
+    travelers: trip.travelers.length > 0 ? trip.travelers : TRAVELERS.map((t) => t.id),
+    status: "confirmed",
+    costAmount: "",
+    costCurrency: trip.currency ?? "",
+    notes: "",
+    link: "",
+  };
+}
 
 function SaveButton({ isEdit }: { isEdit: boolean }) {
   const { pending } = useFormStatus();
@@ -70,7 +85,15 @@ function SaveButton({ isEdit }: { isEdit: boolean }) {
   );
 }
 
-export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
+export function SegmentForm({
+  initial: given,
+  trip,
+}: {
+  /** Left off when adding, which starts from the trip's own defaults. */
+  initial?: SegmentFormValues;
+  trip: SegmentFormTrip;
+}) {
+  const [initial] = useState(() => given ?? emptySegment(trip));
   const [state, formAction] = useActionState<FormState, FormData>(
     saveSegment,
     {},
@@ -79,10 +102,20 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
   const meta = kindMeta(kind);
   const isEdit = Boolean(initial.id);
 
+  // Whatever this trip actually uses comes first in the dropdown, so a
+  // Singapore booking doesn't need scrolling past a list of European zones.
+  const zones = timezoneOptions(
+    initial.startTz,
+    initial.endTz,
+    trip.timezone,
+    ...trip.legs.map((leg) => leg.timezone),
+  );
+
   return (
     <div className="space-y-6">
       <form action={formAction} className="space-y-5">
         {isEdit && <input type="hidden" name="id" value={initial.id} />}
+        <input type="hidden" name="tripId" value={trip.id} />
 
         <div>
           <span className="label">Type</span>
@@ -198,7 +231,7 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
               defaultValue={initial.startTz}
               className="field"
             >
-              {TIMEZONE_OPTIONS.map((tz) => (
+              {zones.map((tz) => (
                 <option key={tz} value={tz}>
                   {tz}
                 </option>
@@ -231,7 +264,7 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
               className="field"
             >
               <option value="">Same as start</option>
-              {TIMEZONE_OPTIONS.map((tz) => (
+              {zones.map((tz) => (
                 <option key={tz} value={tz}>
                   {tz}
                 </option>
@@ -327,17 +360,22 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
 
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
-            <label className="label" htmlFor="leg">
+            <label className="label" htmlFor="legId">
               Leg
             </label>
             <select
-              id="leg"
-              name="leg"
-              defaultValue={initial.leg}
+              id="legId"
+              name="legId"
+              defaultValue={initial.legId}
               className="field"
+              disabled={trip.legs.length === 0}
             >
-              <option value="">Work it out from the date</option>
-              {SELECTABLE_LEGS.map((leg) => (
+              <option value="">
+                {trip.legs.length === 0
+                  ? "No legs on this trip yet"
+                  : "Work it out from the date"}
+              </option>
+              {trip.legs.map((leg) => (
                 <option key={leg.id} value={leg.id}>
                   {leg.label}
                 </option>
@@ -420,7 +458,7 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
 
         <div className="flex items-center gap-2">
           <SaveButton isEdit={isEdit} />
-          <Link href="/" className="btn-secondary">
+          <Link href={`/t/${trip.slug}`} className="btn-secondary">
             Cancel
           </Link>
         </div>
@@ -429,6 +467,7 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
       {isEdit && (
         <form action={deleteSegment} className="border-t border-edge pt-5">
           <input type="hidden" name="id" value={initial.id} />
+          <input type="hidden" name="tripSlug" value={trip.slug} />
           <button type="submit" className="btn-danger">
             Delete this segment
           </button>

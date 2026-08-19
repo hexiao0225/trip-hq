@@ -158,7 +158,14 @@ function Timing({ segment }: { segment: Segment }) {
   );
 }
 
-export function SegmentCard({ segment }: { segment: Segment }) {
+export function SegmentCard({
+  segment,
+  tripSlug,
+}: {
+  segment: Segment;
+  /** The trip whose pages this card is being shown on, for the edit link. */
+  tripSlug: string;
+}) {
   const meta = kindMeta(segment.kind);
   const cancelled = segment.status === "cancelled";
   const query = mapsQuery(segment);
@@ -198,7 +205,7 @@ export function SegmentCard({ segment }: { segment: Segment }) {
 
           <h3 className={`mt-1.5 ${cancelled ? "line-through" : ""}`}>
             <Link
-              href={`/segment/${segment.id}`}
+              href={`/t/${tripSlug}/segment/${segment.id}`}
               className="font-medium underline-offset-2 hover:underline"
             >
               {segment.title}
