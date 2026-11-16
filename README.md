@@ -114,7 +114,7 @@ days.
 | Styling | **Tailwind CSS v4** | Light-mode only, with a warm neutral palette. |
 | Database | **Postgres** (Neon) via **Drizzle ORM** | Typed queries and a schema-as-code migration path. |
 | Driver | **postgres.js** | Speaks plain Postgres, so the same code runs against a local server in development and Neon's pooler in production. |
-| Parsing | Open-weight model (`deepseek/deepseek-v4-flash` by default) via **Vercel AI Gateway** and the AI SDK | Structured output with a Zod schema, so the model returns validated objects rather than text to regex. On Vercel the gateway authenticates with the deployment's OIDC token, so there's no API key to expire. |
+| Parsing | **OpenAI** (`gpt-6.1-terra`) with your own key, or with no key an open-weight model (`deepseek/deepseek-v4-flash`) via **Vercel AI Gateway**; both through the AI SDK | Structured output with a Zod schema, so the model returns validated objects rather than text to regex. On Vercel the gateway authenticates with the deployment's OIDC token, so there's no API key to expire. |
 | Dates | **Luxon** | Real IANA timezone handling — the whole app depends on getting this right. |
 | Hosting | **Vercel** | |
 
@@ -185,7 +185,9 @@ npm run dev
 | `DATABASE_URL` | Postgres connection string. Use the **pooled** one from Neon (the host contains `-pooler`). |
 | `APP_PASSCODE` | The answer to the sign-in question. The question itself lives in `src/lib/config.ts`. |
 | `AUTH_SECRET` | Signs the session cookie. `openssl rand -base64 32` |
-| `AI_GATEWAY_MODEL` | Optional. Which model parses emails; any id from `https://ai-gateway.vercel.sh/v1/models`. |
+| `OPENAI_API_KEY` | Parses emails with OpenAI. Leave unset to use AI Gateway instead. |
+| `OPENAI_MODEL` | Optional. OpenAI model id; defaults to `gpt-6.1-terra`. |
+| `AI_GATEWAY_MODEL` | Optional, used only without `OPENAI_API_KEY`. Which model parses emails; any id from `https://ai-gateway.vercel.sh/v1/models`. |
 | `AI_GATEWAY_API_KEY` | Only for parsing outside Vercel (local dev); deployments authenticate automatically. |
 | `INBOUND_WEBHOOK_SECRET` | Shared secret the email webhook must present. `openssl rand -hex 24` |
 
