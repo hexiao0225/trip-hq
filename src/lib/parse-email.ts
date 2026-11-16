@@ -1,7 +1,6 @@
 import "server-only";
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import { generateText, NoObjectGeneratedError, Output } from "ai";
 import * as z from "zod/v4";
 
 import { PETS, TRAVELERS } from "@/lib/config";
@@ -145,6 +144,15 @@ const ExtractionSchema = z.object({
 export type ParsedSegment = z.infer<typeof ParsedSegmentSchema>;
 export type Extraction = z.infer<typeof ExtractionSchema>;
 
+/**
+ * An open-weight model reached through Vercel AI Gateway. On Vercel the
+ * gateway authenticates with the deployment's OIDC token, so there is no API
+ * key to store or expire. Override with AI_GATEWAY_MODEL (any id from
+ * https://ai-gateway.vercel.sh/v1/models) to switch models without a code
+ * change.
+ */
+const DEFAULT_MODEL = "deepseek/deepseek-v4-flash";
+
 /** Emails above this size are almost always quoted threads or HTML noise. */
 const MAX_BODY_CHARS = 120_000;
 
@@ -205,12 +213,6 @@ export interface ParseResult {
 export async function parseBookingEmail(
   input: ParseInput,
 ): Promise<ParseResult> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY is not set.");
-  }
-
-  const client = new Anthropic();
-
   const rawBody = input.body?.trim()
     ? input.body
     : stripHtml(input.html ?? "");
@@ -219,8 +221,8 @@ export async function parseBookingEmail(
   const truncated = cleaned.length > MAX_BODY_CHARS;
   const body = truncated ? cleaned.slice(0, MAX_BODY_CHARS) : cleaned;
 
-  // Today's date goes in the user turn, not the system prompt, so the cached
-  // system prefix stays byte-identical across requests.
+  // Today's date goes in the user turn, not the system prompt, so the system
+  // prefix stays byte-identical across requests and can be cached.
   const userContent = [
     `Today's date is ${new Date().toISOString().slice(0, 10)}. Use it only to`,
     `resolve years that the email leaves implicit.`,
@@ -235,24 +237,22 @@ export async function parseBookingEmail(
     body,
   ].join("\n");
 
-  const message = await client.messages.parse({
-    model: "claude-opus-5",
-    max_tokens: 16000,
-    thinking: { type: "adaptive" },
-    output_config: {
-      effort: "medium",
-      format: zodOutputFormat(ExtractionSchema),
-    },
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userContent }],
-  });
-
-  if (message.stop_reason === "refusal") {
-    throw new Error("The model declined to process this email.");
+  try {
+    const { output } = await generateText({
+      model: process.env.AI_GATEWAY_MODEL?.trim() || DEFAULT_MODEL,
+      instructions: SYSTEM_PROMPT,
+      prompt: userContent,
+      output: Output.object({ schema: ExtractionSchema }),
+      maxOutputTokens: 16000,
+    });
+    return { extraction: output, truncated };
+  } catch (error) {
+    if (NoObjectGeneratedError.isInstance(error)) {
+      throw new Error(
+        "The model returned no parseable output. Try Re-parse, or set " +
+          "AI_GATEWAY_MODEL to a different model.",
+      );
+    }
+    throw error;
   }
-  if (!message.parsed_output) {
-    throw new Error("The model returned no parseable output.");
-  }
-
-  return { extraction: message.parsed_output, truncated };
 }

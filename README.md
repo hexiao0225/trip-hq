@@ -21,7 +21,7 @@ happens, which matters when a single day spans Pacific, British and Eastern time
 - **Correct local times.** Each booking stores the instant *and* the timezone it
   should be read in. A San Francisco → London flight shows a 19:50 departure and
   a 14:10 arrival the next day, with the true 10h 20m between them.
-- **Email ingestion.** Forward a confirmation; Claude reads it into structured
+- **Email ingestion.** Forward a confirmation; an AI model reads it into structured
   bookings that wait in a review queue until you accept them.
 - **Per-person views.** Filter to one traveler for the stretch where you're in
   different countries — or to the dogs, whose boarding runs alongside the trip.
@@ -114,7 +114,7 @@ days.
 | Styling | **Tailwind CSS v4** | Light-mode only, with a warm neutral palette. |
 | Database | **Postgres** (Neon) via **Drizzle ORM** | Typed queries and a schema-as-code migration path. |
 | Driver | **postgres.js** | Speaks plain Postgres, so the same code runs against a local server in development and Neon's pooler in production. |
-| Parsing | **Claude** (`claude-opus-5`) via the Anthropic SDK | Structured outputs with a Zod schema, so the model returns validated objects rather than text to regex. |
+| Parsing | Open-weight model (`deepseek/deepseek-v4-flash` by default) via **Vercel AI Gateway** and the AI SDK | Structured output with a Zod schema, so the model returns validated objects rather than text to regex. On Vercel the gateway authenticates with the deployment's OIDC token, so there's no API key to expire. |
 | Dates | **Luxon** | Real IANA timezone handling — the whole app depends on getting this right. |
 | Hosting | **Vercel** | |
 
@@ -129,7 +129,7 @@ forwarded email
   → provider webhook  (Postmark / CloudMailin / Resend / SendGrid / Cloudflare)
   → POST /api/inbound/email      normalise the payload, store the raw email
   → respond 200 immediately      providers time out in seconds
-  → after()                      parse with Claude in the background
+  → after()                      parse with the model in the background
   → review queue                 wait for a human
 ```
 
@@ -185,7 +185,8 @@ npm run dev
 | `DATABASE_URL` | Postgres connection string. Use the **pooled** one from Neon (the host contains `-pooler`). |
 | `APP_PASSCODE` | The answer to the sign-in question. The question itself lives in `src/lib/config.ts`. |
 | `AUTH_SECRET` | Signs the session cookie. `openssl rand -base64 32` |
-| `ANTHROPIC_API_KEY` | Parses forwarded emails. |
+| `AI_GATEWAY_MODEL` | Optional. Which model parses emails; any id from `https://ai-gateway.vercel.sh/v1/models`. |
+| `AI_GATEWAY_API_KEY` | Only for parsing outside Vercel (local dev); deployments authenticate automatically. |
 | `INBOUND_WEBHOOK_SECRET` | Shared secret the email webhook must present. `openssl rand -hex 24` |
 
 Schema changes are applied with `npm run db:push`, which diffs
