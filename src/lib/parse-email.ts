@@ -1,6 +1,12 @@
 import "server-only";
 
-import { generateText, NoObjectGeneratedError, Output } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import {
+  generateText,
+  NoObjectGeneratedError,
+  Output,
+  type LanguageModel,
+} from "ai";
 import * as z from "zod/v4";
 
 import { PETS, TRAVELERS } from "@/lib/config";
@@ -145,13 +151,25 @@ export type ParsedSegment = z.infer<typeof ParsedSegmentSchema>;
 export type Extraction = z.infer<typeof ExtractionSchema>;
 
 /**
- * An open-weight model reached through Vercel AI Gateway. On Vercel the
- * gateway authenticates with the deployment's OIDC token, so there is no API
- * key to store or expire. Override with AI_GATEWAY_MODEL (any id from
- * https://ai-gateway.vercel.sh/v1/models) to switch models without a code
- * change.
+ * Which model reads the email.
+ *
+ * With OPENAI_API_KEY set, OpenAI is called directly with that key
+ * (OPENAI_MODEL picks the model). Without it, an open-weight model is reached
+ * through Vercel AI Gateway, which authenticates with the deployment's OIDC
+ * token, so there is no key at all (AI_GATEWAY_MODEL picks the model, any id
+ * from https://ai-gateway.vercel.sh/v1/models).
  */
-const DEFAULT_MODEL = "deepseek/deepseek-v4-flash";
+const DEFAULT_OPENAI_MODEL = "gpt-6.1-terra";
+const DEFAULT_GATEWAY_MODEL = "deepseek/deepseek-v4-flash";
+
+function chooseModel(): LanguageModel {
+  const openaiKey = process.env.OPENAI_API_KEY?.trim();
+  if (openaiKey) {
+    const openai = createOpenAI({ apiKey: openaiKey });
+    return openai(process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL);
+  }
+  return process.env.AI_GATEWAY_MODEL?.trim() || DEFAULT_GATEWAY_MODEL;
+}
 
 /** Emails above this size are almost always quoted threads or HTML noise. */
 const MAX_BODY_CHARS = 120_000;
@@ -239,7 +257,7 @@ export async function parseBookingEmail(
 
   try {
     const { output } = await generateText({
-      model: process.env.AI_GATEWAY_MODEL?.trim() || DEFAULT_MODEL,
+      model: chooseModel(),
       instructions: SYSTEM_PROMPT,
       prompt: userContent,
       output: Output.object({ schema: ExtractionSchema }),
@@ -249,8 +267,8 @@ export async function parseBookingEmail(
   } catch (error) {
     if (NoObjectGeneratedError.isInstance(error)) {
       throw new Error(
-        "The model returned no parseable output. Try Re-parse, or set " +
-          "AI_GATEWAY_MODEL to a different model.",
+        "The model returned no parseable output. Try Re-parse, or switch " +
+          "models with OPENAI_MODEL / AI_GATEWAY_MODEL.",
       );
     }
     throw error;
