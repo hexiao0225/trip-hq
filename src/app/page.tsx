@@ -4,14 +4,18 @@ import { Nav } from "@/components/nav";
 import { SegmentCard } from "@/components/segment-card";
 import { SetupNotice } from "@/components/setup-notice";
 import {
-  MILESTONES,
+  CURRENT_TRIP,
   PETS_FILTER_ID,
   TRAVELERS,
+  TRIPS,
   legById,
+  tripById,
+  type Trip,
 } from "@/lib/config";
 import type { Segment } from "@/lib/db/schema";
 import {
   filterByTraveler,
+  filterByTrip,
   getPendingCount,
   getTimelineSegments,
   groupByDay,
@@ -29,10 +33,50 @@ function firstParam(value: string | string[] | undefined): string | null {
   return value ?? null;
 }
 
-function Milestones() {
+/** Timeline URL for a trip and traveler filter; the current trip needs no param. */
+function timelineHref(tripId: string, who: string | null): string {
+  const params = new URLSearchParams();
+  if (tripId !== CURRENT_TRIP.id) params.set("trip", tripId);
+  if (who) params.set("who", who);
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+}
+
+function TripSwitcher({ active, who }: { active: Trip; who: string | null }) {
+  // Newest first: the trip being planned is the one you want to reach.
+  const trips = [...TRIPS].reverse();
+  return (
+    <div className="-mx-4 overflow-x-auto px-4">
+      <div className="flex gap-2">
+        {trips.map((trip) => {
+          const selected = trip.id === active.id;
+          return (
+            <Link
+              key={trip.id}
+              href={timelineHref(trip.id, who)}
+              className={`flex min-h-11 shrink-0 flex-col justify-center rounded-xl border px-3.5 py-1.5 transition ${
+                selected
+                  ? "border-stone-900 bg-surface"
+                  : "border-edge text-muted hover:text-foreground"
+              }`}
+            >
+              <span className="text-sm font-semibold">{trip.name}</span>
+              <span className="text-xs text-muted">
+                {trip.id === CURRENT_TRIP.id ? "Current trip" : trip.summary}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Milestones({ trip }: { trip: Trip }) {
+  if (trip.milestones.length === 0) return null;
   return (
     <div className="grid gap-2 sm:grid-cols-2">
-      {MILESTONES.map((milestone) => {
+      {trip.milestones.map((milestone) => {
         const date = isoDateToDate(milestone.date, milestone.timezone);
         return (
           <div
@@ -55,7 +99,13 @@ function Milestones() {
   );
 }
 
-function TravelerFilter({ active }: { active: string | null }) {
+function TravelerFilter({
+  active,
+  tripId,
+}: {
+  active: string | null;
+  tripId: string;
+}) {
   const options = [
     { id: null, label: "Everyone" },
     ...TRAVELERS.map((t) => ({ id: t.id as string | null, label: t.name })),
@@ -70,7 +120,7 @@ function TravelerFilter({ active }: { active: string | null }) {
         return (
           <Link
             key={option.label}
-            href={option.id ? `/?who=${option.id}` : "/"}
+            href={timelineHref(tripId, option.id)}
             className={`inline-flex min-h-10 items-center rounded-full border px-3.5 text-sm transition ${
               selected
                 ? "border-stone-900 bg-stone-900 text-white"
@@ -124,6 +174,7 @@ export default async function TimelinePage({
 }) {
   const params = await searchParams;
   const who = firstParam(params.who);
+  const trip = tripById(firstParam(params.trip)) ?? CURRENT_TRIP;
 
   let all: Segment[];
   let pendingCount: number;
@@ -136,7 +187,7 @@ export default async function TimelinePage({
     return <SetupNotice error={error} />;
   }
 
-  const visible = filterByTraveler(all, who);
+  const visible = filterByTraveler(filterByTrip(all, trip), who);
   const upcoming = nextUpcoming(visible);
 
   // Work out the leg heading for each day up front: a label is only shown when
@@ -157,18 +208,22 @@ export default async function TimelinePage({
       <Nav pendingCount={pendingCount} />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6">
-        <div className="space-y-3">
-          <Milestones />
+        <TripSwitcher active={trip} who={who} />
+
+        <div className="mt-4 space-y-3">
+          <Milestones trip={trip} />
           {upcoming && <UpNext segment={upcoming} />}
         </div>
 
         <div className="mt-6">
-          <TravelerFilter active={who} />
+          <TravelerFilter active={who} tripId={trip.id} />
         </div>
 
         {days.length === 0 ? (
           <div className="mt-10 rounded-xl border border-dashed border-edge px-4 py-10 text-center">
-            <p className="font-medium">Nothing booked yet</p>
+            <p className="font-medium">
+              Nothing booked for {trip.name} yet
+            </p>
             <p className="mt-1 text-sm text-muted">
               Add something by hand, or forward a confirmation email to your
               trip address and it&apos;ll appear in Review.

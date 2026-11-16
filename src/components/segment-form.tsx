@@ -6,10 +6,11 @@ import { useFormStatus } from "react-dom";
 
 import { deleteSegment, saveSegment, type FormState } from "@/app/actions";
 import {
+  CURRENT_TRIP,
   PETS,
-  SELECTABLE_LEGS,
   TIMEZONE_OPTIONS,
   TRAVELERS,
+  TRIPS,
 } from "@/lib/config";
 import { KINDS, SEGMENT_STATUSES, kindMeta } from "@/lib/kinds";
 
@@ -44,7 +45,7 @@ export const EMPTY_SEGMENT: SegmentFormValues = {
   vendor: "",
   confirmation: "",
   startLocal: "",
-  startTz: "Europe/London",
+  startTz: CURRENT_TRIP.timezone,
   endLocal: "",
   endTz: "",
   fromLabel: "",
@@ -56,7 +57,7 @@ export const EMPTY_SEGMENT: SegmentFormValues = {
   leg: "",
   status: "confirmed",
   costAmount: "",
-  costCurrency: "GBP",
+  costCurrency: CURRENT_TRIP.currency,
   notes: "",
   link: "",
 };
@@ -336,10 +337,14 @@ export function SegmentForm({ initial }: { initial: SegmentFormValues }) {
               className="field"
             >
               <option value="">Work it out from the date</option>
-              {SELECTABLE_LEGS.map((leg) => (
-                <option key={leg.id} value={leg.id}>
-                  {leg.label}
-                </option>
+              {[...TRIPS].reverse().map((trip) => (
+                <optgroup key={trip.id} label={trip.name}>
+                  {trip.legs.map((leg) => (
+                    <option key={leg.id} value={leg.id}>
+                      {leg.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
