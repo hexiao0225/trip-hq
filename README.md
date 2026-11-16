@@ -230,10 +230,20 @@ a quick way to check the wiring.
 `src/lib/config.ts` is the file to edit as plans firm up:
 
 - **Who** — travelers and pets, their names and badge colours.
-- **Legs** — London, Scotland, Residency, Beijing, Home. Give a leg `start` and
-  `end` dates and the timeline groups bookings under it automatically; leave
-  them `null` while they're undecided.
-- **Milestones** — the countdown cards.
+- **Trips** — each with its own legs, milestones, default timezone and
+  currency. The last trip in `TRIPS` is the current one: the timeline opens on
+  it and the others stay a tap away in the trip switcher.
+- **Legs** — give a leg `start` and `end` dates and the timeline groups
+  bookings under it automatically; leave them `null` while they're undecided.
+- **Milestones** — the countdown cards, per trip.
+
+### Starting a new trip
+
+Append a trip to `TRIPS` with a `from` date after the previous trip ended, and
+at least one leg. That's all: a forwarded booking with no leg set files under
+whichever trip's window its date falls in, so new confirmations land in the new
+trip on their own. Leg ids must be unique across all trips — a leg names its
+trip. No database change is needed.
 - **The sign-in question.**
 
 ## Scripts

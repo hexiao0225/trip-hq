@@ -8,7 +8,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: "Trip HQ",
-  description: "London, Scotland, the residency, and the way home.",
+  description: "Our trips: forward a booking email and it lands in the itinerary.",
 };
 
 /**

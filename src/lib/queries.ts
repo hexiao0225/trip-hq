@@ -2,7 +2,16 @@ import "server-only";
 
 import { asc, desc, eq, ne } from "drizzle-orm";
 
-import { LEGS, PETS_FILTER_ID, isPet, type LegId } from "@/lib/config";
+import {
+  CURRENT_TRIP,
+  LEGS,
+  PETS_FILTER_ID,
+  isPet,
+  tripForDate,
+  tripForLeg,
+  type LegId,
+  type Trip,
+} from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { inboundEmails, segments, type Segment } from "@/lib/db/schema";
 import { dayKey } from "@/lib/time";
@@ -98,6 +107,22 @@ export function resolveLeg(row: Segment): LegId {
     if (leg.start && leg.end && afterStart && beforeEnd) return leg.id;
   }
   return "unscheduled";
+}
+
+/**
+ * Which trip a segment belongs to. An explicit leg names its trip; otherwise
+ * the date decides; an undated segment with no leg belongs to the current trip.
+ */
+export function resolveTrip(row: Segment): Trip {
+  const byLeg = row.leg ? tripForLeg(row.leg) : undefined;
+  if (byLeg) return byLeg;
+  if (!row.startAt) return CURRENT_TRIP;
+  return tripForDate(dayKey(row.startAt, row.startTz));
+}
+
+/** Restrict a list to one trip's segments. */
+export function filterByTrip(rows: Segment[], trip: Trip): Segment[] {
+  return rows.filter((row) => resolveTrip(row).id === trip.id);
 }
 
 /** Restrict a list to segments involving a given traveler, or either dog. */

@@ -2,7 +2,7 @@
  * Trip configuration.
  *
  * This is the one file to edit as plans firm up: who's involved, the legs of
- * the trip, and their date ranges. Everything else in the app derives from it.
+ * each trip, and their date ranges. Everything else in the app derives from it.
  */
 
 export type TravelerId = "xiao" | "hanyang";
@@ -75,13 +75,8 @@ export function isPet(id: string): boolean {
  */
 export const PETS_FILTER_ID = "pets";
 
-export type LegId =
-  | "london"
-  | "scotland"
-  | "residency"
-  | "beijing"
-  | "home"
-  | "unscheduled";
+/** A leg id. Ids are unique across every trip, so a leg names its trip too. */
+export type LegId = string;
 
 export interface Leg {
   id: LegId;
@@ -100,60 +95,166 @@ export interface Leg {
 }
 
 /**
- * The shape of the trip. Dates marked null are still TBD — fill them in here
- * and the timeline will group and label segments automatically.
+ * Milestones surfaced on the dashboard. These are the fixed points the rest of
+ * the trip is planned around.
  */
+export interface Milestone {
+  label: string;
+  /** YYYY-MM-DD, interpreted in `timezone`. */
+  date: string;
+  timezone: string;
+  who: WhoId[];
+}
+
+export interface Trip {
+  /** Used in the URL (?trip=vancouver). */
+  id: string;
+  name: string;
+  /** One line under the name in the trip switcher. */
+  summary: string;
+  /**
+   * First day of this trip's window, YYYY-MM-DD. A booking with no leg set
+   * belongs to the latest trip whose window has started by its date, so a new
+   * trip only needs a `from` date for forwarded emails to file under it.
+   */
+  from: string;
+  /** Defaults for the Add form. */
+  timezone: string;
+  currency: string;
+  legs: Leg[];
+  milestones: Milestone[];
+}
+
+/**
+ * Every trip, oldest first. The last one is the current trip: it is what the
+ * timeline opens on, and where undated bookings with no leg land.
+ *
+ * To start a new trip, append one here with a `from` date after the previous
+ * trip ended. Leg dates marked null are still TBD — fill them in and the
+ * timeline will group and label segments automatically.
+ */
+export const TRIPS: Trip[] = [
+  {
+    id: "uk-2026",
+    name: "UK & Beijing",
+    summary: "London, Scotland, the residency, and the way home",
+    from: "2026-01-01",
+    timezone: "Europe/London",
+    currency: "GBP",
+    legs: [
+      {
+        id: "london",
+        label: "London",
+        place: "London, UK",
+        timezone: "Europe/London",
+        start: null,
+        end: null,
+        travelers: ["xiao", "hanyang"],
+        accentClass: "border-l-indigo-400",
+      },
+      {
+        id: "scotland",
+        label: "Scotland",
+        place: "Scotland, UK",
+        timezone: "Europe/London",
+        start: null,
+        end: null,
+        travelers: ["xiao", "hanyang"],
+        accentClass: "border-l-emerald-400",
+      },
+      {
+        id: "residency",
+        label: "Residency",
+        place: "Dumfries House, Ayrshire",
+        timezone: "Europe/London",
+        start: null,
+        end: "2026-09-24",
+        travelers: ["xiao"],
+        accentClass: "border-l-amber-400",
+      },
+      {
+        id: "beijing",
+        label: "Beijing",
+        place: "Beijing, China",
+        timezone: "Asia/Shanghai",
+        start: null,
+        end: null,
+        travelers: ["hanyang"],
+        accentClass: "border-l-fuchsia-400",
+      },
+      {
+        id: "home",
+        label: "Home",
+        place: "San Mateo, CA",
+        timezone: "America/Los_Angeles",
+        start: null,
+        end: null,
+        travelers: ["xiao", "hanyang"],
+        accentClass: "border-l-slate-400",
+      },
+    ],
+    milestones: [
+      {
+        label: "Residency ends",
+        date: "2026-09-24",
+        timezone: "Europe/London",
+        who: ["xiao"],
+      },
+      {
+        label: "Fly home to San Mateo",
+        date: "2026-09-25",
+        timezone: "Europe/London",
+        who: ["xiao"],
+      },
+    ],
+  },
+  {
+    id: "vancouver",
+    name: "Vancouver",
+    summary: "Vancouver, BC",
+    from: "2026-11-01",
+    timezone: "America/Vancouver",
+    currency: "CAD",
+    legs: [
+      {
+        id: "vancouver",
+        label: "Vancouver",
+        place: "Vancouver, BC",
+        timezone: "America/Vancouver",
+        start: null,
+        end: null,
+        travelers: ["xiao", "hanyang"],
+        accentClass: "border-l-red-400",
+      },
+    ],
+    milestones: [],
+  },
+];
+
+export const CURRENT_TRIP: Trip = TRIPS[TRIPS.length - 1];
+
+export function tripById(id: string | null | undefined): Trip | undefined {
+  if (!id) return undefined;
+  return TRIPS.find((t) => t.id === id);
+}
+
+/** The trip a leg belongs to. */
+export function tripForLeg(legId: string): Trip | undefined {
+  return TRIPS.find((t) => t.legs.some((l) => l.id === legId));
+}
+
+/** The trip whose window covers a date (YYYY-MM-DD). */
+export function tripForDate(iso: string): Trip {
+  let match = TRIPS[0];
+  for (const trip of TRIPS) {
+    if (trip.from <= iso) match = trip;
+  }
+  return match;
+}
+
+/** Every leg of every trip, plus the catch-all for segments that match none. */
 export const LEGS: Leg[] = [
-  {
-    id: "london",
-    label: "London",
-    place: "London, UK",
-    timezone: "Europe/London",
-    start: null,
-    end: null,
-    travelers: ["xiao", "hanyang"],
-    accentClass: "border-l-indigo-400",
-  },
-  {
-    id: "scotland",
-    label: "Scotland",
-    place: "Scotland, UK",
-    timezone: "Europe/London",
-    start: null,
-    end: null,
-    travelers: ["xiao", "hanyang"],
-    accentClass: "border-l-emerald-400",
-  },
-  {
-    id: "residency",
-    label: "Residency",
-    place: "Dumfries House, Ayrshire",
-    timezone: "Europe/London",
-    start: null,
-    end: "2026-09-24",
-    travelers: ["xiao"],
-    accentClass: "border-l-amber-400",
-  },
-  {
-    id: "beijing",
-    label: "Beijing",
-    place: "Beijing, China",
-    timezone: "Asia/Shanghai",
-    start: null,
-    end: null,
-    travelers: ["hanyang"],
-    accentClass: "border-l-fuchsia-400",
-  },
-  {
-    id: "home",
-    label: "Home",
-    place: "San Mateo, CA",
-    timezone: "America/Los_Angeles",
-    start: null,
-    end: null,
-    travelers: ["xiao", "hanyang"],
-    accentClass: "border-l-slate-400",
-  },
+  ...TRIPS.flatMap((t) => t.legs),
   {
     id: "unscheduled",
     label: "Unscheduled",
@@ -171,36 +272,6 @@ export function legById(id: string | null | undefined): Leg | undefined {
   return LEGS.find((l) => l.id === id);
 }
 
-/** Legs shown as choices in the segment form (everything but the catch-all). */
-export const SELECTABLE_LEGS = LEGS.filter((l) => l.id !== "unscheduled");
-
-/**
- * Milestones surfaced on the dashboard. These are the fixed points the rest of
- * the trip is planned around.
- */
-export interface Milestone {
-  label: string;
-  /** YYYY-MM-DD, interpreted in `timezone`. */
-  date: string;
-  timezone: string;
-  who: WhoId[];
-}
-
-export const MILESTONES: Milestone[] = [
-  {
-    label: "Residency ends",
-    date: "2026-09-24",
-    timezone: "Europe/London",
-    who: ["xiao"],
-  },
-  {
-    label: "Fly home to San Mateo",
-    date: "2026-09-25",
-    timezone: "Europe/London",
-    who: ["xiao"],
-  },
-];
-
 /**
  * The sign-in prompt.
  *
@@ -213,8 +284,9 @@ export const SECURITY_QUESTION = "What's the passphrase?";
 
 /** Timezones offered in the segment form, in the order they appear. */
 export const TIMEZONE_OPTIONS = [
-  "Europe/London",
+  "America/Vancouver",
   "America/Los_Angeles",
+  "Europe/London",
   "Asia/Shanghai",
   "America/New_York",
   "Europe/Paris",
