@@ -280,7 +280,7 @@ export function legById(id: string | null | undefined): Leg | undefined {
  * specific fact about you narrows the guess space for anyone who finds the
  * app, however good the answer itself is.
  */
-export const SECURITY_QUESTION = "What's the passphrase?";
+export const SECURITY_QUESTION = "What is my favorite dog breed?";
 
 /** Timezones offered in the segment form, in the order they appear. */
 export const TIMEZONE_OPTIONS = [
